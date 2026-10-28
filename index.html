@@ -767,7 +767,7 @@
     W.word = entry.w; W.cn = entry.c;
     W.typed = 0; W.hinted = Array(entry.w.length).fill(false);
     W.mistakes = 0; W.hintUsed = false;
-    W.timeLimit = 10;
+    W.timeLimit = 10000; // 默认 10 秒（单位：毫秒）
     W.timeLeft = W.timeLimit;
     W.answered = false;
     cnText.textContent = entry.c;
