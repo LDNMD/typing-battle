@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>打字战斗 · 四六级单词</title>
 <style>
   :root {
@@ -11,7 +11,7 @@
     --pink: #ff5c8a; --red: #ff3b3b; --text: #e8ecff; --dim: #8b93c7;
     --shake-x: 0px; --shake-y: 0px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     height: 100%; overflow: hidden; background: var(--bg1); color: var(--text);
     font-family: "Consolas", "SF Mono", "Cascadia Mono", Menlo, monospace;
@@ -44,16 +44,16 @@
   @keyframes gridmove { from { background-position: 0 0, 0 0; } to { background-position: 0 44px, 44px 0; } }
 
   #hud {
-    position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 22px;
-    padding: 14px 22px; font-size: 15px; z-index: 10; pointer-events: none;
+    position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 16px;
+    padding: 12px 16px; font-size: 14px; z-index: 10; pointer-events: none;
   }
-  #hud .group { display: flex; align-items: center; gap: 9px; }
-  #hud .label { color: var(--dim); font-size: 12px; letter-spacing: 1px; }
-  #hpBar { position: relative; width: 160px; height: 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; overflow: hidden; }
+  #hud .group { display: flex; align-items: center; gap: 8px; }
+  #hud .label { color: var(--dim); font-size: 11px; letter-spacing: 1px; }
+  #hpBar { position: relative; width: 150px; height: 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; overflow: hidden; }
   #hpFill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--green), var(--cyan)); border-radius: 8px; transition: width 0.25s ease, background 0.35s ease; box-shadow: 0 0 10px rgba(62,230,255,0.5); }
   #hpText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
-  #score { font-size: 22px; font-weight: bold; color: var(--cyan); text-shadow: 0 0 12px rgba(62,230,255,0.6); min-width: 70px; }
-  #combo { font-size: 18px; font-weight: bold; color: var(--gold); min-width: 56px; transition: transform 0.1s; }
+  #score { font-size: 20px; font-weight: bold; color: var(--cyan); text-shadow: 0 0 12px rgba(62,230,255,0.6); min-width: 54px; }
+  #combo { font-size: 16px; font-weight: bold; color: var(--gold); min-width: 44px; transition: transform 0.1s; }
   #combo.pop { transform: scale(1.4); }
   #level { color: var(--green); font-weight: bold; }
   #best { color: var(--dim); }
@@ -65,58 +65,62 @@
   #hud button:hover { background: rgba(255,255,255,0.14); }
 
   #oppPanel {
-    position: absolute; top: 14px; right: 22px; z-index: 10;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
-    padding: 12px 16px; border-radius: 14px;
+    position: absolute; top: 68px; right: 14px; z-index: 10;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+    padding: 10px 14px; border-radius: 12px;
     background: rgba(16,20,40,0.72); border: 1px solid rgba(255,255,255,0.12); pointer-events: none;
   }
-  #oppPanel .opp-name { font-size: 13px; color: var(--dim); }
-  #oppHpBar { position: relative; width: 160px; height: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; overflow: hidden; }
-  #oppHpFill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--pink), var(--red)); border-radius: 7px; transition: width 0.25s ease; }
+  #oppPanel .opp-name { font-size: 12px; color: var(--dim); }
+  #oppHpBar { position: relative; width: 150px; height: 15px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 7px; overflow: hidden; }
+  #oppHpFill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--pink), var(--red)); border-radius: 6px; transition: width 0.25s ease; }
   #oppHpText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
-  .opp-stats { font-size: 12px; color: var(--dim); }
+  .opp-stats { font-size: 11px; color: var(--dim); }
   .opp-stats b { color: var(--gold); }
 
-  #stage { position: absolute; inset: 0; }
-  #wall { position: absolute; top: 0; bottom: 0; left: 96px; width: 2px; background: linear-gradient(to bottom, transparent, rgba(62,230,255,0.5), transparent); box-shadow: 0 0 16px 2px rgba(62,230,255,0.35); }
-  #player { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 54px; filter: drop-shadow(0 0 18px rgba(62,230,255,0.7)); z-index: 5; animation: float 3s ease-in-out infinite; }
-  @keyframes float { 50% { transform: translateY(calc(-50% - 8px)); } }
-  #player.hit { animation: playerhit 0.3s; }
-  @keyframes playerhit { 30% { filter: drop-shadow(0 0 24px var(--red)) drop-shadow(0 0 40px var(--red)); } }
-
-  #enemies { position: absolute; inset: 0; }
-  .enemy {
-    position: absolute; top: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;
-    width: 124px; padding: 9px 8px 7px; border-radius: 14px;
-    background: rgba(16,20,40,0.88); border: 1px solid rgba(255,255,255,0.12);
-    will-change: transform; transition: border-color 0.2s, box-shadow 0.2s;
+  /* ---------- 答题区 ---------- */
+  #playArea {
+    position: absolute; top: 7vh; left: 50%; transform: translateX(-50%);
+    width: min(92vw, 660px); display: flex; flex-direction: column; gap: 14px; align-items: center; z-index: 8;
   }
-  .enemy.target { border-color: var(--cyan); box-shadow: 0 0 18px rgba(62,230,255,0.45); }
-  .enemy .eCN { font-size: 19px; font-weight: bold; color: #fff; line-height: 1.3; text-align: center; max-width: 110px; }
-  .enemy .espeak { font-size: 18px; cursor: pointer; padding: 2px 8px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); transition: background 0.15s, transform 0.1s; line-height: 1; }
-  .enemy .espeak:hover { background: rgba(62,230,255,0.25); }
-  .enemy .espeak:active { transform: scale(0.9); }
-  .enemy .ebody { font-size: 26px; line-height: 1; }
-  .enemy .ehp { display: flex; gap: 2px; font-size: 11px; min-height: 12px; }
-  .enemy.dying { animation: die 0.35s forwards; }
-  @keyframes die { to { opacity: 0; transform: scale(1.6) translateY(-10px); } }
+  #wordCard {
+    width: 100%; display: flex; flex-direction: column; gap: 14px; align-items: center;
+    padding: 22px 18px; background: rgba(16,20,40,0.62); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
+  }
+  #cnText { font-size: clamp(24px, 6.5vw, 40px); font-weight: bold; color: #fff; line-height: 1.3; text-align: center; }
+  #wordBlanks {
+    font-size: clamp(28px, 8.5vw, 52px); letter-spacing: clamp(4px, 1.6vw, 10px);
+    min-height: 1.3em; font-weight: bold; color: var(--dim); text-align: center; line-height: 1.2; word-break: break-all;
+  }
+  #wordBlanks span { transition: color 0.06s, text-shadow 0.06s; }
+  #wordBlanks span.done { color: var(--green); text-shadow: 0 0 10px rgba(62,230,160,0.6); }
+  #wordBlanks span.hint { color: var(--gold); }
+  #wordBlanks span.cur { color: #fff; text-shadow: 0 0 14px rgba(62,230,255,1); }
+  #wordBlanks span.miss { color: var(--red); }
+  #wordBlanks.error span.cur { color: var(--red); text-shadow: 0 0 14px var(--red); }
+  #progressBar { width: 100%; height: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 7px; overflow: hidden; }
+  #progressFill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--green), var(--cyan)); border-radius: 6px; }
+  #feedback { font-size: 21px; font-weight: bold; min-height: 28px; text-align: center; }
+
+  #controls { width: 100%; display: flex; gap: 10px; align-items: stretch; }
+  .cbtn {
+    flex: 0 0 auto; min-width: 62px; font-family: inherit; font-size: 20px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18);
+    color: var(--text); border-radius: 12px; padding: 12px 14px; cursor: pointer; line-height: 1;
+  }
+  .cbtn:active { background: rgba(62,230,255,0.25); }
+  #hintBtn { color: var(--gold); }
+  #hintBtn .hint-cost { font-size: 11px; color: var(--dim); display: block; margin-top: 3px; }
+  #typeInput {
+    flex: 1; font-family: inherit; font-size: 18px; padding: 14px 14px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(62,230,255,0.4);
+    color: #fff; border-radius: 12px; outline: none; text-align: center; letter-spacing: 2px;
+  }
+  #typeInput:focus { border-color: var(--cyan); box-shadow: 0 0 14px rgba(62,230,255,0.35); }
 
   #fx { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
   .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; }
-  .dmg { position: absolute; font-size: 20px; font-weight: bold; pointer-events: none; text-shadow: 0 0 8px currentColor; transform: translate(-50%, -50%); }
 
-  #cmdWrap { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: none; }
-  #cmd { font-size: 34px; letter-spacing: 5px; font-weight: bold; min-height: 46px; color: var(--dim); white-space: nowrap; }
-  #cmd span { transition: color 0.06s, text-shadow 0.06s; }
-  #cmd span.done { color: var(--green); text-shadow: 0 0 10px rgba(62,230,160,0.6); }
-  #cmd span.hint { color: var(--gold); }
-  #cmd span.cur { color: #fff; text-shadow: 0 0 14px rgba(62,230,255,1); }
-  #cmdWrap.error #cmd span.cur { color: var(--red); text-shadow: 0 0 14px var(--red); }
-  #cmdHint { color: var(--dim); font-size: 12px; margin-top: 7px; letter-spacing: 1px; opacity: 0.85; }
-  #hintBtn { pointer-events: auto; margin-top: 9px; font-family: inherit; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); color: var(--gold); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
-  #hintBtn:hover { background: rgba(255,209,102,0.15); }
-
-  #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 8; background: radial-gradient(ellipse at center, transparent 55%, rgba(255,59,59,0.55)); opacity: 0; transition: opacity 0.35s; }
+  #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 9; background: radial-gradient(ellipse at center, transparent 55%, rgba(255,59,59,0.55)); opacity: 0; transition: opacity 0.35s; }
   #vignette.on { opacity: 1; transition: opacity 0s; }
 
   .overlay {
@@ -125,12 +129,12 @@
   }
   .overlay.hidden { display: none; }
   .overlay h1 {
-    font-size: 44px; letter-spacing: 3px;
+    font-size: clamp(30px, 8vw, 44px); letter-spacing: 3px;
     background: linear-gradient(90deg, var(--cyan), var(--green), var(--gold), var(--pink));
     -webkit-background-clip: text; background-clip: text; color: transparent;
     text-shadow: 0 0 40px rgba(62,230,255,0.2);
   }
-  .overlay .sub { color: var(--dim); max-width: 560px; line-height: 1.8; font-size: 14px; }
+  .overlay .sub { color: var(--dim); max-width: 560px; line-height: 1.8; font-size: 14px; padding: 0 16px; }
   .overlay .big { font-size: 26px; color: var(--cyan); font-weight: bold; }
   .overlay input {
     font-family: inherit; font-size: 16px; padding: 10px 14px;
@@ -148,7 +152,7 @@
   .btn:active { transform: translateY(0); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   .btn.secondary { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid rgba(255,255,255,0.2); box-shadow: none; }
-  .menu-btns { display: flex; gap: 18px; }
+  .menu-btns { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
   .status { color: var(--dim); font-size: 13px; min-height: 18px; }
 
   .room-box { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
@@ -160,19 +164,27 @@
   .room-sec h2 { font-size: 16px; color: var(--cyan); }
   .room-code { font-size: 32px; letter-spacing: 8px; color: var(--gold); font-weight: bold; }
 
-  #countdownNum { font-size: 120px; color: var(--cyan); text-shadow: 0 0 40px rgba(62,230,255,0.8); }
+  #countdownNum { font-size: clamp(80px, 24vw, 120px); color: var(--cyan); text-shadow: 0 0 40px rgba(62,230,255,0.8); }
 
-  .stats { display: flex; gap: 34px; color: var(--text); font-size: 14px; }
+  .stats { display: flex; gap: 30px; color: var(--text); font-size: 14px; flex-wrap: wrap; justify-content: center; }
   .stats b { display: block; font-size: 24px; color: var(--gold); }
 
-  #reviewBox { max-width: 540px; width: 100%; max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; text-align: left; }
+  #reviewBox { max-width: 540px; width: 92%; max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; text-align: left; }
   .review-title { font-size: 14px; color: var(--gold); margin-bottom: 8px; text-align: center; }
-  .review-item { display: flex; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); font-size: 14px; }
+  .review-item { display: flex; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); font-size: 14px; flex-wrap: wrap; }
   .review-item:last-child { border-bottom: none; }
-  .review-item .rw { color: var(--cyan); font-weight: bold; min-width: 120px; }
+  .review-item .rw { color: var(--cyan); font-weight: bold; min-width: 100px; }
   .review-item .rc { color: var(--text); flex: 1; }
   .review-item .rr { color: var(--pink); font-size: 12px; }
   .review-empty { color: var(--dim); font-size: 13px; text-align: center; padding: 12px 0; }
+
+  @media (max-width: 600px) {
+    #hud { flex-wrap: wrap; gap: 8px; padding: 8px 10px; font-size: 12px; }
+    #hud #best { display: none; }
+    #hpBar { width: 108px; height: 16px; }
+    #score { font-size: 16px; }
+    #playArea { top: 10vh; }
+  }
 </style>
 </head>
 <body>
@@ -185,39 +197,41 @@
     <div class="group"><span class="label">连击</span><span id="combo">x0</span></div>
     <div class="group"><span class="label">波次</span><span id="level">1</span></div>
     <div class="group"><span class="label">最高</span><span id="best">0</span></div>
-    <button id="muteBtn" title="静音 (M)">🔊 音效</button>
+    <button id="muteBtn" title="静音 (M)">🔊</button>
   </div>
 
   <div id="oppPanel">
     <div class="opp-name">对手：<span id="oppName">—</span></div>
     <div id="oppHpBar"><div id="oppHpFill"></div><span id="oppHpText">100</span></div>
-    <div class="opp-stats">得分 <b id="oppScore">0</b> · 连击 <b id="oppCombo">x0</b> · 击杀 <b id="oppKills">0</b></div>
+    <div class="opp-stats">得分 <b id="oppScore">0</b> · 连击 <b id="oppCombo">x0</b> · 背词 <b id="oppKills">0</b></div>
   </div>
 
-  <div id="stage">
-    <div id="wall"></div>
-    <div id="player">🛡️</div>
-    <div id="enemies"></div>
-    <div id="fx"></div>
+  <div id="playArea">
+    <div id="wordCard">
+      <div id="cnText">准备开始…</div>
+      <div id="wordBlanks">_ _ _ _ _</div>
+      <div id="progressBar"><div id="progressFill"></div></div>
+      <div id="feedback"></div>
+    </div>
+    <div id="controls">
+      <button class="cbtn" id="replayBtn" title="重听发音">🔊</button>
+      <input id="typeInput" type="text" lang="en" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="点这里输入英文…" enterkeyhint="done">
+      <button class="cbtn" id="hintBtn" title="提示 (Tab)">💡<span class="hint-cost">-10分</span></button>
+    </div>
   </div>
 
-  <div id="cmdWrap">
-    <div id="cmd"></div>
-    <div id="cmdHint">根据中文释义拼写英文单词 · 空格重听 · Tab 提示</div>
-    <button id="hintBtn">💡 提示（-10分）</button>
-  </div>
-
+  <div id="fx"></div>
   <div id="vignette"></div>
 
   <!-- 首页：选择模式 -->
   <div id="menuOverlay" class="overlay">
     <h1>打字战斗 · 四六级</h1>
-    <p class="sub">背单词 + 打字对战。根据中文释义默写英文单词攻击敌人。</p>
+    <p class="sub">根据中文释义默写英文单词。答对回血 +5，超时扣血 -10。</p>
     <div class="menu-btns">
       <button class="btn" id="singleBtn">🎮 单人游戏</button>
       <button class="btn" id="multiBtn">⚔️ 多人对战</button>
     </div>
-    <p class="sub">（Esc 暂停 · M 静音 · 空格重听发音 · Tab 提示）</p>
+    <p class="sub">（电脑直接打字 · 手机点输入框打字 · 空格重听 · Tab 提示）</p>
   </div>
 
   <!-- 多人：房间页 -->
@@ -465,36 +479,25 @@
     { w:'withdraw', c:'撤回', l:6 }, { w:'withstand', c:'承受', l:6 },
   ];
 
-  // ---------- 敌人类型 ----------
-  const TYPES = {
-    grunt: { emoji:'👾', hp:1, speed:1.0,  points:10,  color:'#3ee6a0' },
-    swarm: { emoji:'🦠', hp:1, speed:1.7,  points:15,  color:'#ffd166' },
-    brute: { emoji:'🤖', hp:2, speed:0.7,  points:25,  color:'#ff8a5c' },
-    boss:  { emoji:'🐉', hp:5, speed:0.42, points:100, color:'#ff5c8a' },
-  };
-
   // ---------- DOM ----------
   const $ = s => document.querySelector(s);
-  const gameEl = $('#game'), stage = $('#stage'), enemiesLayer = $('#enemies'), fxLayer = $('#fx');
-  const playerEl = $('#player'), cmdWrap = $('#cmdWrap'), cmdEl = $('#cmd'), vignette = $('#vignette');
+  const gameEl = $('#game'), fxLayer = $('#fx'), vignette = $('#vignette');
   const hpFill = $('#hpFill'), hpText = $('#hpText'), scoreEl = $('#score'), comboEl = $('#combo'), levelEl = $('#level'), bestEl = $('#best');
   const oppName = $('#oppName'), oppHpFill = $('#oppHpFill'), oppHpText = $('#oppHpText'), oppScore = $('#oppScore'), oppCombo = $('#oppCombo'), oppKills = $('#oppKills');
   const menuOverlay = $('#menuOverlay'), roomOverlay = $('#roomOverlay'), countdownOverlay = $('#countdownOverlay'), countdownNum = $('#countdownNum'), overOverlay = $('#overOverlay'), pauseOverlay = $('#pauseOverlay');
   const roomStatus = $('#roomStatus');
+  const cnText = $('#cnText'), wordBlanks = $('#wordBlanks'), progressFill = $('#progressFill'), feedbackEl = $('#feedback');
+  const typeInput = $('#typeInput');
 
   // ---------- 状态 ----------
-  const WALL_X = 96;
   const G = {
     mode: 'single', running: false, over: false, paused: false, muted: false,
     hp: 100, maxHp: 100, score: 0, kills: 0, combo: 0, maxCombo: 0,
-    level: 1, timeSinceSpawn: 0, spawnInterval: 2600,
-    bossPending: false, review: [],
+    level: 1, review: [],
     best: parseInt(localStorage.getItem('typingBattleBest') || '0', 10),
   };
-  let enemies = [];
-  let activeTarget = null;
-  let prevTarget = null, prevTyped = -1;
-  let SW = 0, SH = 0;
+  // 当前单词
+  const W = { word: '', cn: '', typed: 0, hinted: [], mistakes: 0, hintUsed: false, timeLeft: 0, timeLimit: 0, answered: false };
   let oppState = null;
 
   // ---------- 音频 ----------
@@ -515,11 +518,10 @@
   }
   const sfx = {
     type: () => tone(620, 0.06, 'square', 0.04),
-    kill: () => { tone(520, 0.1, 'sawtooth', 0.06); setTimeout(() => tone(780, 0.12, 'sawtooth', 0.06), 60); },
+    correct: () => { tone(520, 0.1, 'sawtooth', 0.06); setTimeout(() => tone(780, 0.12, 'sawtooth', 0.06), 60); },
     wrong: () => tone(140, 0.18, 'sawtooth', 0.07),
     hint: () => tone(880, 0.08, 'sine', 0.06),
     hit: () => tone(90, 0.3, 'sawtooth', 0.12, -40),
-    boss: () => { tone(220, 0.3, 'square', 0.08, 60); setTimeout(() => tone(330, 0.3, 'square', 0.08, 80), 140); },
     win: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'sine', 0.08), i * 120)); },
     lose: () => { [440, 330, 220, 110].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'sawtooth', 0.08), i * 160)); },
   };
@@ -637,23 +639,15 @@
   function rand(min, max) { return Math.random() * (max - min) + min; }
   function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
   function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
-  function measure() { const r = stage.getBoundingClientRect(); SW = r.width; SH = r.height; }
 
-  function pickWord(level, isBoss) {
+  function pickWord(level) {
     let pool;
-    if (isBoss) pool = VOCAB.filter(v => v.l === 6 && v.w.length >= 8);
-    else if (level <= 2) pool = VOCAB.filter(v => v.l === 4 && v.w.length <= 6);
+    if (level <= 2) pool = VOCAB.filter(v => v.l === 4 && v.w.length <= 6);
     else if (level <= 4) pool = VOCAB.filter(v => v.l === 4);
     else if (level <= 6) pool = VOCAB.filter(v => v.w.length >= 6);
     else pool = VOCAB.filter(v => v.l === 6);
     if (!pool.length) pool = VOCAB;
     return pick(pool);
-  }
-  function pickType() {
-    const r = Math.random();
-    if (r < 0.55) return 'grunt';
-    if (r < 0.80) return 'swarm';
-    return 'brute';
   }
 
   function spellHTML(word, typed, hinted) {
@@ -684,7 +678,7 @@
     box.innerHTML = html;
   }
 
-  // ---------- HUD ----------
+  // ---------- HUD & 显示 ----------
   function updateHUD() {
     const ratio = G.hp / G.maxHp;
     hpFill.style.width = (ratio * 100) + '%';
@@ -696,9 +690,18 @@
     levelEl.textContent = G.level;
     bestEl.textContent = G.best;
   }
-  function updateCommand() {
-    if (!activeTarget) { cmdEl.innerHTML = ''; return; }
-    cmdEl.innerHTML = spellHTML(activeTarget.word, activeTarget.typed, activeTarget.hinted);
+  function updateBlanks() {
+    wordBlanks.innerHTML = spellHTML(W.word, W.typed, W.hinted);
+  }
+  function updateProgress() {
+    const r = Math.max(0, W.timeLeft / W.timeLimit);
+    progressFill.style.width = (r * 100) + '%';
+    progressFill.style.background = r > 0.5 ? 'linear-gradient(90deg, var(--green), var(--cyan))'
+      : r > 0.25 ? 'linear-gradient(90deg, var(--gold), var(--orange))' : 'linear-gradient(90deg, var(--orange), var(--red))';
+  }
+  function showFeedback(text, color) {
+    feedbackEl.textContent = text;
+    feedbackEl.style.color = color || 'var(--text)';
   }
 
   // ---------- 特效 ----------
@@ -710,9 +713,9 @@
     gameEl.classList.add('shaking');
   }
   function flashError() {
-    cmdWrap.classList.add('error');
+    wordBlanks.classList.add('error');
     clearTimeout(flashError._t);
-    flashError._t = setTimeout(() => cmdWrap.classList.remove('error'), 160);
+    flashError._t = setTimeout(() => wordBlanks.classList.remove('error'), 160);
   }
   function flashHit() {
     vignette.classList.add('on');
@@ -734,140 +737,96 @@
       ], { duration: randInt(350, 650), easing: 'ease-out' }).onfinish = () => p.remove();
     }
   }
-  function addDamage(x, y, text, color) {
-    const d = document.createElement('div');
-    d.className = 'dmg';
-    d.textContent = text;
-    d.style.color = color;
-    d.style.left = x + 'px'; d.style.top = y + 'px';
-    fxLayer.appendChild(d);
-    d.animate([
-      { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1 },
-      { transform: 'translate(-50%,-130%) scale(1)', opacity: 0 }
-    ], { duration: 700, easing: 'ease-out' }).onfinish = () => d.remove();
-  }
-
-  // ---------- 敌人 ----------
-  function spawnEnemy() {
-    const isBoss = G.bossPending;
-    if (isBoss) G.bossPending = false;
-    const type = isBoss ? 'boss' : pickType();
-    const cfg = TYPES[type];
-    const entry = pickWord(G.level, isBoss);
-    const speed = (12 + G.level * 3.5) * cfg.speed;
-
-    const el = document.createElement('div');
-    el.className = 'enemy ' + type;
-    el.innerHTML =
-      `<div class="eCN">${entry.c}</div>` +
-      `<div class="espeak" title="重听发音">🔊</div>` +
-      `<div class="ebody">${cfg.emoji}</div>` +
-      `<div class="ehp">${'❤'.repeat(cfg.hp)}</div>`;
-    enemiesLayer.appendChild(el);
-
-    const y = rand(90, Math.max(150, SH - 150));
-    const enemy = { el, word: entry.w, cn: entry.c, typed: 0, hinted: Array(entry.w.length).fill(false),
-                    mistakes: 0, hintUsed: false, hp: cfg.hp, maxHp: cfg.hp,
-                    points: cfg.points, color: cfg.color, type, speed,
-                    x: SW + 60, y, w: el.offsetWidth, h: el.offsetHeight };
-    el.style.transform = `translate(${enemy.x}px, ${enemy.y}px)`;
-    el.querySelector('.espeak').addEventListener('click', (ev) => { ev.stopPropagation(); speak(enemy.word); });
-    enemies.push(enemy);
-    if (isBoss) sfx.boss();
-  }
-
-  function enemyCenter(e) { return { x: e.x + e.w / 2, y: e.y + e.h / 2 }; }
-
-  function damageEnemy(e) {
-    if (e.mistakes > 0 || e.hintUsed) {
-      const parts = [];
-      if (e.mistakes > 0) parts.push('拼错' + e.mistakes + '次');
-      if (e.hintUsed) parts.push('用了提示');
-      addReview(e.word, e.cn, parts.join(' · '));
-    }
-    e.hp--;
-    e.el.querySelector('.ehp').innerHTML = '❤'.repeat(Math.max(0, e.hp));
-    const c = enemyCenter(e);
-    if (e.hp <= 0) {
-      killEnemy(e);
-    } else {
-      const entry = pickWord(G.level, e.type === 'boss');
-      e.word = entry.w; e.cn = entry.c; e.typed = 0;
-      e.hinted = Array(entry.w.length).fill(false);
-      e.mistakes = 0; e.hintUsed = false;
-      e.el.querySelector('.eCN').textContent = entry.c;
-      addDamage(c.x, c.y, '-1', '#fff');
-      addParticles(c.x, c.y, e.color, 8);
-      if (e === activeTarget) speak(e.word);
-      sfx.type();
-    }
-  }
-
-  function killEnemy(e) {
-    const idx = enemies.indexOf(e);
-    if (idx !== -1) enemies.splice(idx, 1);
-    const c = enemyCenter(e);
-    e.el.classList.add('dying');
-    setTimeout(() => e.el.remove(), 350);
-    addParticles(c.x, c.y, e.color, 22);
-    addDamage(c.x, c.y, '+' + e.points, e.color);
-
-    G.kills++;
-    G.combo++;
-    G.maxCombo = Math.max(G.maxCombo, G.combo);
-    G.score += Math.round(e.points * (1 + G.combo * 0.1));
-    G.level = 1 + Math.floor(G.kills / 8);
-    G.spawnInterval = Math.max(950, 2600 - G.level * 130);
-    if (G.kills % 10 === 0) G.bossPending = true;
-
-    if (e.type === 'boss') shake(8); else shake(4);
-    sfx.kill();
-    comboPop();
-    updateHUD();
-  }
-
-  function hitPlayer(e) {
-    const idx = enemies.indexOf(e);
-    if (idx !== -1) enemies.splice(idx, 1);
-    addReview(e.word, e.cn, '未答出');
-    e.el.remove();
-    G.hp = Math.max(0, G.hp - 20);
-    G.combo = 0;
-    shake(10); flashHit(); sfx.hit();
-    playerEl.classList.remove('hit'); void playerEl.offsetWidth; playerEl.classList.add('hit');
-    updateHUD();
-    if (G.hp <= 0) onLocalDeath();
-  }
-
   function comboPop() {
     comboEl.classList.remove('pop'); void comboEl.offsetWidth; comboEl.classList.add('pop');
   }
-  function leftmost() {
-    let best = null;
-    for (const e of enemies) if (!best || e.x < best.x) best = e;
-    return best;
-  }
-  function updateEnemies(dt) {
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      const e = enemies[i];
-      e.x -= e.speed * dt;
-      e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
-      if (e.x + e.w <= WALL_X) hitPlayer(e);
-    }
-  }
-  function markTarget() {
-    for (const e of enemies) e.el.classList.toggle('target', e === activeTarget);
+  function wordCenter() {
+    const r = wordBlanks.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }
 
-  // ---------- 提示系统 ----------
+  // ---------- 答题流程 ----------
+  function nextWord() {
+    const entry = pickWord(G.level);
+    W.word = entry.w; W.cn = entry.c;
+    W.typed = 0; W.hinted = Array(entry.w.length).fill(false);
+    W.mistakes = 0; W.hintUsed = false;
+    W.timeLimit = Math.max(6, Math.min(16, entry.w.length * 1.0 + 4));
+    W.timeLeft = W.timeLimit;
+    W.answered = false;
+    cnText.textContent = entry.c;
+    showFeedback('', '');
+    updateBlanks();
+    updateProgress();
+    speak(entry.w);
+    typeInput.focus();
+  }
+
+  function processLetter(ch) {
+    if (!W.word || W.answered || G.over || G.paused || !G.running) return;
+    const need = W.word[W.typed];
+    if (ch === need) {
+      W.typed++;
+      sfx.type();
+      updateBlanks();
+      if (W.typed >= W.word.length) onCorrect();
+    } else {
+      W.mistakes++;
+      G.combo = Math.max(0, G.combo - 1);
+      shake(2); flashError(); sfx.wrong(); updateHUD();
+    }
+  }
+
+  function onCorrect() {
+    W.answered = true;
+    const parts = [];
+    if (W.mistakes > 0) parts.push('拼错' + W.mistakes + '次');
+    if (W.hintUsed) parts.push('用了提示');
+    if (parts.length) addReview(W.word, W.cn, parts.join(' · '));
+
+    G.hp = Math.min(G.maxHp, G.hp + 5);
+    G.kills++;
+    G.combo++;
+    G.maxCombo = Math.max(G.maxCombo, G.combo);
+    G.score += Math.round(W.word.length * 15 * (1 + G.combo * 0.1));
+    G.level = 1 + Math.floor(G.kills / 8);
+
+    const c = wordCenter();
+    addParticles(c.x, c.y, 'var(--green)', 16);
+    showFeedback('✓ 答对 +5', 'var(--green)');
+    sfx.correct();
+    comboPop();
+    updateHUD();
+    setTimeout(nextWord, 480);
+  }
+
+  function timeUp() {
+    if (W.answered || !W.word) return;
+    W.answered = true;
+    addReview(W.word, W.cn, '未答出');
+    G.hp = Math.max(0, G.hp - 10);
+    G.combo = 0;
+    revealWord();
+    showFeedback('✗ 超时 -10  ' + W.word, 'var(--red)');
+    shake(6); flashHit(); sfx.hit();
+    updateHUD();
+    if (G.hp <= 0) { onLocalDeath(); return; }
+    setTimeout(nextWord, 1400);
+  }
+
+  function revealWord() {
+    let h = '';
+    for (let i = 0; i < W.word.length; i++) h += `<span class="miss">${W.word[i]}</span>`;
+    wordBlanks.innerHTML = h;
+  }
+
   function useHint() {
-    const t = activeTarget;
-    if (!t || G.over || G.paused || !G.running) return;
-    for (let i = t.typed; i < t.word.length; i++) {
-      if (!t.hinted[i]) {
-        t.hinted[i] = true; t.hintUsed = true;
+    if (!W.word || W.answered || G.over || G.paused || !G.running) return;
+    for (let i = W.typed; i < W.word.length; i++) {
+      if (!W.hinted[i]) {
+        W.hinted[i] = true; W.hintUsed = true;
         G.score = Math.max(0, G.score - 10);
-        sfx.hint(); updateHUD(); updateCommand();
+        sfx.hint(); updateHUD(); updateBlanks();
         return;
       }
     }
@@ -875,19 +834,16 @@
 
   // ---------- 流程 ----------
   function startGame() {
-    enemies.forEach(e => e.el.remove());
-    enemies = [];
-    fxLayer.innerHTML = '';
     G.running = true; G.over = false; G.paused = false;
     G.hp = G.maxHp; G.score = 0; G.kills = 0; G.combo = 0; G.maxCombo = 0;
-    G.level = 1; G.timeSinceSpawn = 0; G.spawnInterval = 2600; G.bossPending = false;
-    G.review = [];
+    G.level = 1; G.review = [];
     oppState = null;
     applyOppState({ hp: 100, score: 0, kills: 0, combo: 0, level: 1 });
     $('#oppPanel').style.display = G.mode === 'multi' ? '' : 'none';
     overOverlay.classList.add('hidden');
     pauseOverlay.classList.add('hidden');
-    measure(); updateHUD(); updateCommand();
+    updateHUD();
+    nextWord();
     if (G.mode === 'multi' && !stateTimer) {
       stateTimer = setInterval(() => {
         if (G.running && !G.over && ws && ws.readyState === 1) {
@@ -933,32 +889,32 @@
   function toggleMute() {
     G.muted = !G.muted;
     if (G.muted && 'speechSynthesis' in window) speechSynthesis.cancel();
-    $('#muteBtn').textContent = G.muted ? '🔇 静音' : '🔊 音效';
+    $('#muteBtn').textContent = G.muted ? '🔇' : '🔊';
   }
 
   // ---------- 输入 ----------
+  let composing = false;
+  typeInput.addEventListener('compositionstart', () => { composing = true; });
+  typeInput.addEventListener('compositionend', () => { composing = false; handleInput(); });
+  typeInput.addEventListener('input', () => { if (!composing) handleInput(); });
+  typeInput.addEventListener('blur', () => {
+    if (G.running && !G.over && !G.paused) setTimeout(() => typeInput.focus(), 60);
+  });
+  function handleInput() {
+    if (G.over || G.paused || !G.running || W.answered) { typeInput.value = ''; return; }
+    const val = typeInput.value;
+    for (const ch of val) {
+      if (/[a-zA-Z]/.test(ch)) processLetter(ch.toLowerCase());
+    }
+    typeInput.value = '';
+  }
+
   function onKey(e) {
     if (e.key === 'Escape') { togglePause(); return; }
     if (e.key === 'm' || e.key === 'M') { toggleMute(); return; }
     if (G.over || G.paused || !G.running) return;
     if (e.key === 'Tab') { e.preventDefault(); useHint(); return; }
-    if (e.key === ' ') { e.preventDefault(); if (activeTarget) speak(activeTarget.word); return; }
-    if (!/^[a-zA-Z]$/.test(e.key)) return;
-    e.preventDefault();
-
-    const t = activeTarget;
-    if (!t) return;
-    const ch = e.key.toLowerCase();
-    const need = t.word[t.typed];
-    if (ch === need) {
-      t.typed++;
-      sfx.type();
-      if (t.typed >= t.word.length) { t.typed = 0; damageEnemy(t); }
-    } else {
-      t.mistakes++;
-      G.combo = Math.max(0, G.combo - 1);
-      shake(3); flashError(); sfx.wrong(); updateHUD();
-    }
+    if (e.key === ' ') { e.preventDefault(); if (W.word) speak(W.word); return; }
   }
 
   // ---------- 主循环 ----------
@@ -968,19 +924,11 @@
     last = now;
 
     if (G.running && !G.paused && !G.over) {
-      G.timeSinceSpawn += dt * 1000;
-      if (G.timeSinceSpawn >= G.spawnInterval) { G.timeSinceSpawn = 0; spawnEnemy(); }
-      updateEnemies(dt);
-    }
-
-    activeTarget = leftmost();
-    if (activeTarget !== prevTarget || (activeTarget && activeTarget.typed !== prevTyped)) {
-      const changed = activeTarget !== prevTarget;
-      prevTarget = activeTarget;
-      prevTyped = activeTarget ? activeTarget.typed : -1;
-      if (changed && activeTarget && G.running && !G.over) speak(activeTarget.word);
-      markTarget();
-      updateCommand();
+      if (W.word && !W.answered) {
+        W.timeLeft -= dt * 1000;
+        if (W.timeLeft <= 0) timeUp();
+        else updateProgress();
+      }
     }
 
     requestAnimationFrame(loop);
@@ -988,13 +936,17 @@
 
   // ---------- 绑定 ----------
   window.addEventListener('keydown', onKey);
-  window.addEventListener('resize', measure);
+  gameEl.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button') || e.target.closest('input')) return;
+    if (G.running && !G.over && !G.paused) typeInput.focus();
+  });
   $('#singleBtn').addEventListener('click', () => { ac(); startSingle(); });
   $('#multiBtn').addEventListener('click', () => { menuOverlay.classList.add('hidden'); roomOverlay.classList.remove('hidden'); });
   $('#createBtn').addEventListener('click', () => { ac(); createRoom(); });
   $('#joinBtn').addEventListener('click', () => { ac(); joinRoom(); });
   $('#roomBackBtn').addEventListener('click', () => location.reload());
   $('#hintBtn').addEventListener('click', useHint);
+  $('#replayBtn').addEventListener('click', () => { if (W.word) speak(W.word); });
   $('#rematchBtn').addEventListener('click', () => {
     if (G.mode === 'multi') {
       send({ type: 'rematch' });
@@ -1008,7 +960,6 @@
   $('#resumeBtn').addEventListener('click', togglePause);
   $('#muteBtn').addEventListener('click', toggleMute);
 
-  measure();
   bestEl.textContent = G.best;
   updateHUD();
   applyOppState({ hp: 100, score: 0, kills: 0, combo: 0, level: 1 });
