@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>打字战斗 · 四六级单词</title>
+<style>
+  :root {
+    --bg1: #0b0d1a; --bg2: #12152b;
+    --cyan: #3ee6ff; --green: #3ee6a0; --gold: #ffd166; --orange: #ff8a5c;
+    --pink: #ff5c8a; --red: #ff3b3b; --text: #e8ecff; --dim: #8b93c7;
+    --shake-x: 0px; --shake-y: 0px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; overflow: hidden; background: var(--bg1); color: var(--text);
+    font-family: "Consolas", "SF Mono", "Cascadia Mono", Menlo, monospace;
+    user-select: none; -webkit-user-select: none;
+  }
+  #game { position: fixed; inset: 0; overflow: hidden; transform: translate(var(--shake-x), var(--shake-y)); }
+  #game.shaking { animation: shake 0.28s linear; }
+  @keyframes shake {
+    0%   { transform: translate(0,0); }
+    20%  { transform: translate(calc(var(--shake-x)*-1), var(--shake-y)); }
+    40%  { transform: translate(var(--shake-x), calc(var(--shake-y)*-1)); }
+    60%  { transform: translate(calc(var(--shake-x)*-1), calc(var(--shake-y)*-1)); }
+    80%  { transform: translate(var(--shake-x), var(--shake-y)); }
+    100% { transform: translate(0,0); }
+  }
+  #bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(62,230,255,0.08), transparent 60%),
+      linear-gradient(var(--bg2), var(--bg1));
+  }
+  #bg::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(62,230,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(62,230,255,0.05) 1px, transparent 1px);
+    background-size: 44px 44px; animation: gridmove 16s linear infinite;
+    mask-image: linear-gradient(to bottom, transparent, #000 20%, #000 80%, transparent);
+  }
+  @keyframes gridmove { from { background-position: 0 0, 0 0; } to { background-position: 0 44px, 44px 0; } }
+
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 22px;
+    padding: 14px 22px; font-size: 15px; z-index: 10; pointer-events: none;
+  }
+  #hud .group { display: flex; align-items: center; gap: 9px; }
+  #hud .label { color: var(--dim); font-size: 12px; letter-spacing: 1px; }
+  #hpBar { position: relative; width: 160px; height: 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; overflow: hidden; }
+  #hpFill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--green), var(--cyan)); border-radius: 8px; transition: width 0.25s ease, background 0.35s ease; box-shadow: 0 0 10px rgba(62,230,255,0.5); }
+  #hpText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+  #score { font-size: 22px; font-weight: bold; color: var(--cyan); text-shadow: 0 0 12px rgba(62,230,255,0.6); min-width: 70px; }
+  #combo { font-size: 18px; font-weight: bold; color: var(--gold); min-width: 56px; transition: transform 0.1s; }
+  #combo.pop { transform: scale(1.4); }
+  #level { color: var(--green); font-weight: bold; }
+  #best { color: var(--dim); }
+  #hud button {
+    pointer-events: auto; margin-left: auto; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15); color: var(--text); border-radius: 8px;
+    padding: 6px 12px; font-family: inherit; font-size: 13px; cursor: pointer;
+  }
+  #hud button:hover { background: rgba(255,255,255,0.14); }
+
+  #oppPanel {
+    position: absolute; top: 14px; right: 22px; z-index: 10;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    padding: 12px 16px; border-radius: 14px;
+    background: rgba(16,20,40,0.72); border: 1px solid rgba(255,255,255,0.12); pointer-events: none;
+  }
+  #oppPanel .opp-name { font-size: 13px; color: var(--dim); }
+  #oppHpBar { position: relative; width: 160px; height: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; overflow: hidden; }
+  #oppHpFill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--pink), var(--red)); border-radius: 7px; transition: width 0.25s ease; }
+  #oppHpText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+  .opp-stats { font-size: 12px; color: var(--dim); }
+  .opp-stats b { color: var(--gold); }
+
+  #stage { position: absolute; inset: 0; }
+  #wall { position: absolute; top: 0; bottom: 0; left: 96px; width: 2px; background: linear-gradient(to bottom, transparent, rgba(62,230,255,0.5), transparent); box-shadow: 0 0 16px 2px rgba(62,230,255,0.35); }
+  #player { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 54px; filter: drop-shadow(0 0 18px rgba(62,230,255,0.7)); z-index: 5; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(calc(-50% - 8px)); } }
+  #player.hit { animation: playerhit 0.3s; }
+  @keyframes playerhit { 30% { filter: drop-shadow(0 0 24px var(--red)) drop-shadow(0 0 40px var(--red)); } }
+
+  #enemies { position: absolute; inset: 0; }
+  .enemy {
+    position: absolute; top: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 124px; padding: 9px 8px 7px; border-radius: 14px;
+    background: rgba(16,20,40,0.88); border: 1px solid rgba(255,255,255,0.12);
+    will-change: transform; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .enemy.target { border-color: var(--cyan); box-shadow: 0 0 18px rgba(62,230,255,0.45); }
+  .enemy .eCN { font-size: 19px; font-weight: bold; color: #fff; line-height: 1.3; text-align: center; max-width: 110px; }
+  .enemy .espeak { font-size: 18px; cursor: pointer; padding: 2px 8px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); transition: background 0.15s, transform 0.1s; line-height: 1; }
+  .enemy .espeak:hover { background: rgba(62,230,255,0.25); }
+  .enemy .espeak:active { transform: scale(0.9); }
+  .enemy .ebody { font-size: 26px; line-height: 1; }
+  .enemy .ehp { display: flex; gap: 2px; font-size: 11px; min-height: 12px; }
+  .enemy.dying { animation: die 0.35s forwards; }
+  @keyframes die { to { opacity: 0; transform: scale(1.6) translateY(-10px); } }
+
+  #fx { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+  .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; }
+  .dmg { position: absolute; font-size: 20px; font-weight: bold; pointer-events: none; text-shadow: 0 0 8px currentColor; transform: translate(-50%, -50%); }
+
+  #cmdWrap { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: none; }
+  #cmd { font-size: 34px; letter-spacing: 5px; font-weight: bold; min-height: 46px; color: var(--dim); white-space: nowrap; }
+  #cmd span { transition: color 0.06s, text-shadow 0.06s; }
+  #cmd span.done { color: var(--green); text-shadow: 0 0 10px rgba(62,230,160,0.6); }
+  #cmd span.hint { color: var(--gold); }
+  #cmd span.cur { color: #fff; text-shadow: 0 0 14px rgba(62,230,255,1); }
+  #cmdWrap.error #cmd span.cur { color: var(--red); text-shadow: 0 0 14px var(--red); }
+  #cmdHint { color: var(--dim); font-size: 12px; margin-top: 7px; letter-spacing: 1px; opacity: 0.85; }
+  #hintBtn { pointer-events: auto; margin-top: 9px; font-family: inherit; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); color: var(--gold); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+  #hintBtn:hover { background: rgba(255,209,102,0.15); }
+
+  #vignette { position: absolute; inset: 0; pointer-events: none; z-index: 8; background: radial-gradient(ellipse at center, transparent 55%, rgba(255,59,59,0.55)); opacity: 0; transition: opacity 0.35s; }
+  #vignette.on { opacity: 1; transition: opacity 0s; }
+
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; text-align: center; z-index: 20; background: rgba(8,10,22,0.86); backdrop-filter: blur(6px);
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 {
+    font-size: 44px; letter-spacing: 3px;
+    background: linear-gradient(90deg, var(--cyan), var(--green), var(--gold), var(--pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 40px rgba(62,230,255,0.2);
+  }
+  .overlay .sub { color: var(--dim); max-width: 560px; line-height: 1.8; font-size: 14px; }
+  .overlay .big { font-size: 26px; color: var(--cyan); font-weight: bold; }
+  .overlay input {
+    font-family: inherit; font-size: 16px; padding: 10px 14px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2);
+    color: var(--text); border-radius: 10px; text-align: center; width: 220px; outline: none;
+  }
+  .overlay input:focus { border-color: var(--cyan); }
+  .btn {
+    margin-top: 8px; font-family: inherit; font-size: 17px; letter-spacing: 2px;
+    color: #061018; background: linear-gradient(90deg, var(--cyan), var(--green));
+    border: none; border-radius: 10px; padding: 13px 34px; cursor: pointer; font-weight: bold;
+    box-shadow: 0 0 24px rgba(62,230,255,0.4); transition: transform 0.1s, box-shadow 0.2s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 0 34px rgba(62,230,255,0.6); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn.secondary { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid rgba(255,255,255,0.2); box-shadow: none; }
+  .menu-btns { display: flex; gap: 18px; }
+  .status { color: var(--dim); font-size: 13px; min-height: 18px; }
+
+  .room-box { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+  .room-sec {
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+    padding: 18px 20px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; min-width: 250px;
+  }
+  .room-sec h2 { font-size: 16px; color: var(--cyan); }
+  .room-code { font-size: 32px; letter-spacing: 8px; color: var(--gold); font-weight: bold; }
+
+  #countdownNum { font-size: 120px; color: var(--cyan); text-shadow: 0 0 40px rgba(62,230,255,0.8); }
+
+  .stats { display: flex; gap: 34px; color: var(--text); font-size: 14px; }
+  .stats b { display: block; font-size: 24px; color: var(--gold); }
+
+  #reviewBox { max-width: 540px; width: 100%; max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; text-align: left; }
+  .review-title { font-size: 14px; color: var(--gold); margin-bottom: 8px; text-align: center; }
+  .review-item { display: flex; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); font-size: 14px; }
+  .review-item:last-child { border-bottom: none; }
+  .review-item .rw { color: var(--cyan); font-weight: bold; min-width: 120px; }
+  .review-item .rc { color: var(--text); flex: 1; }
+  .review-item .rr { color: var(--pink); font-size: 12px; }
+  .review-empty { color: var(--dim); font-size: 13px; text-align: center; padding: 12px 0; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="bg"></div>
+
+  <div id="hud">
+    <div class="group"><span class="label">生命</span><div id="hpBar"><div id="hpFill"></div><span id="hpText">100</span></div></div>
+    <div class="group"><span class="label">得分</span><span id="score">0</span></div>
+    <div class="group"><span class="label">连击</span><span id="combo">x0</span></div>
+    <div class="group"><span class="label">波次</span><span id="level">1</span></div>
+    <div class="group"><span class="label">最高</span><span id="best">0</span></div>
+    <button id="muteBtn" title="静音 (M)">🔊 音效</button>
+  </div>
+
+  <div id="oppPanel">
+    <div class="opp-name">对手：<span id="oppName">—</span></div>
+    <div id="oppHpBar"><div id="oppHpFill"></div><span id="oppHpText">100</span></div>
+    <div class="opp-stats">得分 <b id="oppScore">0</b> · 连击 <b id="oppCombo">x0</b> · 击杀 <b id="oppKills">0</b></div>
+  </div>
+
+  <div id="stage">
+    <div id="wall"></div>
+    <div id="player">🛡️</div>
+    <div id="enemies"></div>
+    <div id="fx"></div>
+  </div>
+
+  <div id="cmdWrap">
+    <div id="cmd"></div>
+    <div id="cmdHint">根据中文释义拼写英文单词 · 空格重听 · Tab 提示</div>
+    <button id="hintBtn">💡 提示（-10分）</button>
+  </div>
+
+  <div id="vignette"></div>
+
+  <!-- 首页：选择模式 -->
+  <div id="menuOverlay" class="overlay">
+    <h1>打字战斗 · 四六级</h1>
+    <p class="sub">背单词 + 打字对战。根据中文释义默写英文单词攻击敌人。</p>
+    <div class="menu-btns">
+      <button class="btn" id="singleBtn">🎮 单人游戏</button>
+      <button class="btn" id="multiBtn">⚔️ 多人对战</button>
+    </div>
+    <p class="sub">（Esc 暂停 · M 静音 · 空格重听发音 · Tab 提示）</p>
+  </div>
+
+  <!-- 多人：房间页 -->
+  <div id="roomOverlay" class="overlay hidden">
+    <h1>多人对战</h1>
+    <div class="room-box">
+      <div class="room-sec">
+        <h2>创建房间</h2>
+        <input id="createName" placeholder="你的昵称（可留空）" maxlength="12">
+        <input id="createPwd" placeholder="房间密码（可留空）" type="password">
+        <button class="btn" id="createBtn">创建房间</button>
+      </div>
+      <div class="room-sec">
+        <h2>加入房间</h2>
+        <input id="joinCode" placeholder="6 位房间号" maxlength="6" style="text-transform:uppercase">
+        <input id="joinName" placeholder="你的昵称（可留空）" maxlength="12">
+        <input id="joinPwd" placeholder="房间密码（若设置）" type="password">
+        <button class="btn" id="joinBtn">加入房间</button>
+      </div>
+    </div>
+    <p class="status" id="roomStatus"></p>
+    <button class="btn secondary" id="roomBackBtn">返回</button>
+  </div>
+
+  <!-- 倒计时 -->
+  <div id="countdownOverlay" class="overlay hidden"><h1 id="countdownNum">3</h1></div>
+
+  <!-- 暂停 -->
+  <div id="pauseOverlay" class="overlay hidden">
+    <h1>已暂停</h1>
+    <button class="btn" id="resumeBtn">继续</button>
+  </div>
+
+  <!-- 结算 -->
+  <div id="overOverlay" class="overlay hidden">
+    <h1 id="resultTitle">失败</h1>
+    <div class="big" id="finalScore">0</div>
+    <div class="stats">
+      <div>背单词数<b id="finalKills">0</b></div>
+      <div>最高连击<b id="finalCombo">0</b></div>
+      <div>对手得分<b id="oppFinalScore">—</b></div>
+      <div>历史最高<b id="finalBest">0</b></div>
+    </div>
+    <div id="reviewBox">
+      <div class="review-title">📖 错词回顾</div>
+      <div id="reviewList"></div>
+    </div>
+    <div class="menu-btns">
+      <button class="btn" id="rematchBtn">再来一局</button>
+      <button class="btn secondary" id="menuBtn">返回菜单</button>
+    </div>
+    <div class="sub" id="rematchStatus"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- 四六级词库 ----------
+  const VOCAB = [
+    { w:'able', c:'能够的', l:4 }, { w:'adapt', c:'适应', l:4 }, { w:'admit', c:'承认', l:4 },
+    { w:'adopt', c:'采纳', l:4 }, { w:'argue', c:'争论', l:4 }, { w:'arise', c:'出现', l:4 },
+    { w:'avoid', c:'避免', l:4 }, { w:'award', c:'奖励', l:4 }, { w:'aware', c:'意识到的', l:4 },
+    { w:'budget', c:'预算', l:4 }, { w:'burden', c:'负担', l:4 }, { w:'career', c:'职业', l:4 },
+    { w:'claim', c:'声称', l:4 }, { w:'commit', c:'承诺', l:4 }, { w:'create', c:'创造', l:4 },
+    { w:'crisis', c:'危机', l:4 }, { w:'define', c:'定义', l:4 }, { w:'degree', c:'程度', l:4 },
+    { w:'delay', c:'推迟', l:4 }, { w:'demand', c:'要求', l:4 }, { w:'deny', c:'否认', l:4 },
+    { w:'depend', c:'依靠', l:4 }, { w:'design', c:'设计', l:4 }, { w:'desire', c:'渴望', l:4 },
+    { w:'device', c:'设备', l:4 }, { w:'devote', c:'奉献', l:4 }, { w:'differ', c:'不同', l:4 },
+    { w:'effort', c:'努力', l:4 }, { w:'employ', c:'雇用', l:4 }, { w:'ensure', c:'确保', l:4 },
+    { w:'expand', c:'扩大', l:4 }, { w:'expect', c:'期望', l:4 }, { w:'expose', c:'暴露', l:4 },
+    { w:'extend', c:'延伸', l:4 }, { w:'focus', c:'焦点', l:4 }, { w:'ignore', c:'忽视', l:4 },
+    { w:'impact', c:'影响', l:4 }, { w:'imply', c:'暗示', l:4 }, { w:'inform', c:'通知', l:4 },
+    { w:'injure', c:'伤害', l:4 }, { w:'insist', c:'坚持', l:4 }, { w:'intend', c:'打算', l:4 },
+    { w:'invest', c:'投资', l:4 }, { w:'issue', c:'问题', l:4 }, { w:'launch', c:'发射', l:4 },
+    { w:'legal', c:'合法的', l:4 }, { w:'limit', c:'限制', l:4 }, { w:'manage', c:'管理', l:4 },
+    { w:'mature', c:'成熟的', l:4 }, { w:'method', c:'方法', l:4 }, { w:'modify', c:'修改', l:4 },
+    { w:'mutual', c:'相互的', l:4 }, { w:'normal', c:'正常的', l:4 }, { w:'notion', c:'概念', l:4 },
+    { w:'obtain', c:'获得', l:4 }, { w:'occupy', c:'占据', l:4 }, { w:'occur', c:'发生', l:4 },
+    { w:'offer', c:'提供', l:4 }, { w:'oppose', c:'反对', l:4 }, { w:'option', c:'选择', l:4 },
+    { w:'origin', c:'起源', l:4 }, { w:'permit', c:'允许', l:4 }, { w:'prefer', c:'更喜欢', l:4 },
+    { w:'profit', c:'利润', l:4 }, { w:'promote', c:'促进', l:4 }, { w:'propose', c:'提议', l:4 },
+    { w:'protect', c:'保护', l:4 }, { w:'pursue', c:'追求', l:4 }, { w:'range', c:'范围', l:4 },
+    { w:'reduce', c:'减少', l:4 }, { w:'refer', c:'提及', l:4 }, { w:'refuse', c:'拒绝', l:4 },
+    { w:'regard', c:'认为', l:4 }, { w:'reject', c:'拒绝', l:4 }, { w:'relate', c:'相关', l:4 },
+    { w:'remain', c:'保持', l:4 }, { w:'remove', c:'移除', l:4 }, { w:'require', c:'要求', l:4 },
+    { w:'resist', c:'抵抗', l:4 }, { w:'result', c:'结果', l:4 }, { w:'reveal', c:'揭示', l:4 },
+    { w:'review', c:'复习', l:4 }, { w:'reward', c:'回报', l:4 }, { w:'secure', c:'安全的', l:4 },
+    { w:'select', c:'选择', l:4 }, { w:'settle', c:'解决', l:4 }, { w:'shift', c:'转移', l:4 },
+    { w:'source', c:'来源', l:4 }, { w:'stress', c:'压力', l:4 }, { w:'submit', c:'提交', l:4 },
+    { w:'supply', c:'供应', l:4 }, { w:'support', c:'支持', l:4 }, { w:'survive', c:'幸存', l:4 },
+    { w:'target', c:'目标', l:4 }, { w:'tend', c:'倾向', l:4 }, { w:'treat', c:'对待', l:4 },
+    { w:'trend', c:'趋势', l:4 }, { w:'unique', c:'独特的', l:4 }, { w:'urgent', c:'紧急的', l:4 },
+    { w:'value', c:'价值', l:4 }, { w:'volume', c:'体积', l:4 }, { w:'witness', c:'目击者', l:4 },
+    { w:'yield', c:'产量', l:4 },
+    { w:'abandon', c:'放弃', l:4 }, { w:'ability', c:'能力', l:4 }, { w:'absence', c:'缺席', l:4 },
+    { w:'absorb', c:'吸收', l:4 }, { w:'academic', c:'学术的', l:4 }, { w:'access', c:'通道', l:4 },
+    { w:'accident', c:'事故', l:4 }, { w:'account', c:'账户', l:4 }, { w:'accurate', c:'准确的', l:4 },
+    { w:'achieve', c:'实现', l:4 }, { w:'acquire', c:'获得', l:4 }, { w:'advance', c:'前进', l:4 },
+    { w:'advantage', c:'优势', l:4 }, { w:'adventure', c:'冒险', l:4 }, { w:'advice', c:'建议', l:4 },
+    { w:'affect', c:'影响', l:4 }, { w:'afford', c:'负担得起', l:4 }, { w:'agency', c:'机构', l:4 },
+    { w:'ambition', c:'抱负', l:4 }, { w:'amount', c:'数量', l:4 }, { w:'analyze', c:'分析', l:4 },
+    { w:'ancient', c:'古代的', l:4 }, { w:'announce', c:'宣布', l:4 }, { w:'anxiety', c:'焦虑', l:4 },
+    { w:'apparent', c:'明显的', l:4 }, { w:'appeal', c:'吸引', l:4 }, { w:'approach', c:'方法', l:4 },
+    { w:'approve', c:'批准', l:4 }, { w:'arrange', c:'安排', l:4 }, { w:'assess', c:'评估', l:4 },
+    { w:'assume', c:'假设', l:4 }, { w:'attach', c:'附上', l:4 }, { w:'attempt', c:'尝试', l:4 },
+    { w:'attitude', c:'态度', l:4 }, { w:'attract', c:'吸引', l:4 }, { w:'audience', c:'观众', l:4 },
+    { w:'average', c:'平均的', l:4 }, { w:'balance', c:'平衡', l:4 }, { w:'barrier', c:'障碍', l:4 },
+    { w:'benefit', c:'利益', l:4 }, { w:'campaign', c:'运动', l:4 }, { w:'candidate', c:'候选人', l:4 },
+    { w:'capable', c:'有能力的', l:4 }, { w:'capacity', c:'容量', l:4 }, { w:'category', c:'类别', l:4 },
+    { w:'challenge', c:'挑战', l:4 }, { w:'character', c:'性格', l:4 }, { w:'climate', c:'气候', l:4 },
+    { w:'collapse', c:'倒塌', l:4 }, { w:'colleague', c:'同事', l:4 }, { w:'combine', c:'结合', l:4 },
+    { w:'comment', c:'评论', l:4 }, { w:'community', c:'社区', l:4 }, { w:'compete', c:'竞争', l:4 },
+    { w:'complain', c:'抱怨', l:4 }, { w:'complex', c:'复杂的', l:4 }, { w:'concept', c:'概念', l:4 },
+    { w:'concern', c:'关心', l:4 }, { w:'conclude', c:'得出结论', l:4 }, { w:'conduct', c:'进行', l:4 },
+    { w:'confident', c:'自信的', l:4 }, { w:'confirm', c:'确认', l:4 }, { w:'conflict', c:'冲突', l:4 },
+    { w:'confuse', c:'使困惑', l:4 }, { w:'constant', c:'持续的', l:4 }, { w:'consume', c:'消耗', l:4 },
+    { w:'contact', c:'联系', l:4 }, { w:'contain', c:'包含', l:4 }, { w:'convince', c:'说服', l:4 },
+    { w:'curious', c:'好奇的', l:4 }, { w:'decline', c:'下降', l:4 }, { w:'decrease', c:'减少', l:4 },
+    { w:'defend', c:'保卫', l:4 }, { w:'describe', c:'描述', l:4 }, { w:'deserve', c:'应得', l:4 },
+    { w:'despite', c:'尽管', l:4 }, { w:'develop', c:'发展', l:4 }, { w:'disaster', c:'灾难', l:4 },
+    { w:'dismiss', c:'解雇', l:4 }, { w:'display', c:'展示', l:4 }, { w:'district', c:'地区', l:4 },
+    { w:'diverse', c:'多样的', l:4 }, { w:'domestic', c:'国内的', l:4 }, { w:'dominate', c:'支配', l:4 },
+    { w:'donate', c:'捐赠', l:4 }, { w:'economic', c:'经济的', l:4 }, { w:'efficient', c:'高效的', l:4 },
+    { w:'emerge', c:'出现', l:4 }, { w:'enormous', c:'巨大的', l:4 }, { w:'establish', c:'建立', l:4 },
+    { w:'estimate', c:'估计', l:4 }, { w:'evaluate', c:'评估', l:4 }, { w:'evidence', c:'证据', l:4 },
+    { w:'evolve', c:'进化', l:4 }, { w:'examine', c:'检查', l:4 }, { w:'exceed', c:'超过', l:4 },
+    { w:'exchange', c:'交换', l:4 }, { w:'expense', c:'花费', l:4 }, { w:'explore', c:'探索', l:4 },
+    { w:'express', c:'表达', l:4 }, { w:'extreme', c:'极端的', l:4 }, { w:'facility', c:'设施', l:4 },
+    { w:'familiar', c:'熟悉的', l:4 }, { w:'feature', c:'特征', l:4 }, { w:'finance', c:'金融', l:4 },
+    { w:'flexible', c:'灵活的', l:4 }, { w:'frequent', c:'频繁的', l:4 }, { w:'function', c:'功能', l:4 },
+    { w:'generate', c:'产生', l:4 }, { w:'generous', c:'慷慨的', l:4 }, { w:'genuine', c:'真正的', l:4 },
+    { w:'gradual', c:'逐渐的', l:4 }, { w:'hesitate', c:'犹豫', l:4 }, { w:'identify', c:'识别', l:4 },
+    { w:'imagine', c:'想象', l:4 }, { w:'imitate', c:'模仿', l:4 }, { w:'incident', c:'事件', l:4 },
+    { w:'include', c:'包括', l:4 }, { w:'increase', c:'增加', l:4 }, { w:'indicate', c:'表明', l:4 },
+    { w:'industry', c:'工业', l:4 }, { w:'influence', c:'影响', l:4 }, { w:'initial', c:'最初的', l:4 },
+    { w:'inspire', c:'激励', l:4 }, { w:'install', c:'安装', l:4 }, { w:'instance', c:'例子', l:4 },
+    { w:'instant', c:'立即的', l:4 }, { w:'intense', c:'强烈的', l:4 }, { w:'internal', c:'内部的', l:4 },
+    { w:'interpret', c:'解释', l:4 }, { w:'introduce', c:'介绍', l:4 }, { w:'invent', c:'发明', l:4 },
+    { w:'involve', c:'涉及', l:4 }, { w:'isolate', c:'隔离', l:4 }, { w:'journey', c:'旅程', l:4 },
+    { w:'justice', c:'正义', l:4 }, { w:'license', c:'执照', l:4 }, { w:'measure', c:'测量', l:4 },
+    { w:'mental', c:'精神的', l:4 }, { w:'mission', c:'任务', l:4 }, { w:'modern', c:'现代的', l:4 },
+    { w:'monitor', c:'监控', l:4 }, { w:'negative', c:'消极的', l:4 }, { w:'neutral', c:'中立的', l:4 },
+    { w:'notice', c:'注意', l:4 }, { w:'obvious', c:'明显的', l:4 }, { w:'official', c:'官方的', l:4 },
+    { w:'operate', c:'操作', l:4 }, { w:'opinion', c:'观点', l:4 }, { w:'ordinary', c:'普通的', l:4 },
+    { w:'organize', c:'组织', l:4 }, { w:'outcome', c:'结果', l:4 }, { w:'overcome', c:'克服', l:4 },
+    { w:'passion', c:'激情', l:4 }, { w:'pattern', c:'模式', l:4 }, { w:'perform', c:'表演', l:4 },
+    { w:'persist', c:'坚持', l:4 }, { w:'physical', c:'身体的', l:4 }, { w:'policy', c:'政策', l:4 },
+    { w:'popular', c:'流行的', l:4 }, { w:'portion', c:'部分', l:4 }, { w:'positive', c:'积极的', l:4 },
+    { w:'possess', c:'拥有', l:4 }, { w:'poverty', c:'贫困', l:4 }, { w:'predict', c:'预测', l:4 },
+    { w:'preserve', c:'保护', l:4 }, { w:'previous', c:'以前的', l:4 }, { w:'primary', c:'主要的', l:4 },
+    { w:'principle', c:'原则', l:4 }, { w:'priority', c:'优先', l:4 }, { w:'private', c:'私人的', l:4 },
+    { w:'privilege', c:'特权', l:4 }, { w:'procedure', c:'程序', l:4 }, { w:'process', c:'过程', l:4 },
+    { w:'produce', c:'生产', l:4 }, { w:'property', c:'财产', l:4 }, { w:'provide', c:'提供', l:4 },
+    { w:'publish', c:'出版', l:4 }, { w:'purchase', c:'购买', l:4 }, { w:'purpose', c:'目的', l:4 },
+    { w:'realize', c:'意识到', l:4 }, { w:'receive', c:'收到', l:4 }, { w:'recover', c:'恢复', l:4 },
+    { w:'reflect', c:'反映', l:4 }, { w:'region', c:'地区', l:4 }, { w:'register', c:'登记', l:4 },
+    { w:'release', c:'释放', l:4 }, { w:'relevant', c:'相关的', l:4 }, { w:'relief', c:'缓解', l:4 },
+    { w:'remind', c:'提醒', l:4 }, { w:'replace', c:'替代', l:4 }, { w:'research', c:'研究', l:4 },
+    { w:'resolve', c:'解决', l:4 }, { w:'resource', c:'资源', l:4 }, { w:'respect', c:'尊重', l:4 },
+    { w:'respond', c:'回应', l:4 }, { w:'restrict', c:'限制', l:4 }, { w:'routine', c:'常规', l:4 },
+    { w:'satisfy', c:'满意', l:4 }, { w:'schedule', c:'日程', l:4 }, { w:'separate', c:'分开', l:4 },
+    { w:'serious', c:'严肃的', l:4 }, { w:'severe', c:'严重的', l:4 }, { w:'similar', c:'相似的', l:4 },
+    { w:'specific', c:'具体的', l:4 }, { w:'standard', c:'标准', l:4 }, { w:'strategy', c:'策略', l:4 },
+    { w:'structure', c:'结构', l:4 }, { w:'struggle', c:'奋斗', l:4 }, { w:'subject', c:'主题', l:4 },
+    { w:'suggest', c:'建议', l:4 }, { w:'suppose', c:'假设', l:4 }, { w:'surface', c:'表面', l:4 },
+    { w:'suspect', c:'怀疑', l:4 }, { w:'symbol', c:'象征', l:4 }, { w:'system', c:'系统', l:4 },
+    { w:'talent', c:'才能', l:4 }, { w:'technique', c:'技术', l:4 }, { w:'theory', c:'理论', l:4 },
+    { w:'threaten', c:'威胁', l:4 }, { w:'tolerate', c:'容忍', l:4 }, { w:'transfer', c:'转移', l:4 },
+    { w:'transport', c:'运输', l:4 }, { w:'typical', c:'典型的', l:4 }, { w:'utilize', c:'利用', l:4 },
+    { w:'various', c:'各种各样的', l:4 }, { w:'vehicle', c:'车辆', l:4 }, { w:'version', c:'版本', l:4 },
+    { w:'victim', c:'受害者', l:4 }, { w:'violence', c:'暴力', l:4 }, { w:'visible', c:'可见的', l:4 },
+    { w:'welfare', c:'福利', l:4 }, { w:'wisdom', c:'智慧', l:4 },
+    { w:'appreciate', c:'欣赏', l:4 }, { w:'appropriate', c:'适当的', l:4 }, { w:'atmosphere', c:'气氛', l:4 },
+    { w:'authority', c:'权威', l:4 }, { w:'available', c:'可用的', l:4 }, { w:'consequence', c:'后果', l:4 },
+    { w:'contribute', c:'贡献', l:4 }, { w:'cooperate', c:'合作', l:4 }, { w:'demonstrate', c:'证明', l:4 },
+    { w:'determine', c:'决定', l:4 }, { w:'discipline', c:'纪律', l:4 }, { w:'distribute', c:'分发', l:4 },
+    { w:'eliminate', c:'消除', l:4 }, { w:'emphasize', c:'强调', l:4 }, { w:'encourage', c:'鼓励', l:4 },
+    { w:'enterprise', c:'企业', l:4 }, { w:'environment', c:'环境', l:4 }, { w:'excellent', c:'优秀的', l:4 },
+    { w:'experiment', c:'实验', l:4 }, { w:'guarantee', c:'保证', l:4 }, { w:'illustrate', c:'说明', l:4 },
+    { w:'immediate', c:'立即的', l:4 }, { w:'independent', c:'独立的', l:4 }, { w:'individual', c:'个人的', l:4 },
+    { w:'insurance', c:'保险', l:4 }, { w:'interfere', c:'干涉', l:4 }, { w:'interrupt', c:'打断', l:4 },
+    { w:'investigate', c:'调查', l:4 }, { w:'knowledge', c:'知识', l:4 }, { w:'manufacture', c:'制造', l:4 },
+    { w:'negotiate', c:'谈判', l:4 }, { w:'opportunity', c:'机会', l:4 }, { w:'particular', c:'特别的', l:4 },
+    { w:'permanent', c:'永久的', l:4 }, { w:'perspective', c:'视角', l:4 }, { w:'phenomenon', c:'现象', l:4 },
+    { w:'potential', c:'潜在的', l:4 }, { w:'practical', c:'实际的', l:4 }, { w:'professional', c:'专业的', l:4 },
+    { w:'recognize', c:'认出', l:4 }, { w:'recommend', c:'推荐', l:4 }, { w:'religious', c:'宗教的', l:4 },
+    { w:'represent', c:'代表', l:4 }, { w:'responsible', c:'负责的', l:4 }, { w:'sensitive', c:'敏感的', l:4 },
+    { w:'significant', c:'重要的', l:4 }, { w:'situation', c:'情况', l:4 }, { w:'statistics', c:'统计', l:4 },
+    { w:'substitute', c:'替代', l:4 }, { w:'sufficient', c:'足够的', l:4 }, { w:'technology', c:'技术', l:4 },
+    { w:'temporary', c:'临时的', l:4 }, { w:'tradition', c:'传统', l:4 }, { w:'transform', c:'转变', l:4 },
+    { w:'translate', c:'翻译', l:4 }, { w:'universal', c:'普遍的', l:4 }, { w:'vulnerable', c:'脆弱的', l:4 },
+    { w:'widespread', c:'广泛的', l:4 },
+    { w:'abundant', c:'丰富的', l:6 }, { w:'abolish', c:'废除', l:6 }, { w:'abrupt', c:'突然的', l:6 },
+    { w:'absurd', c:'荒谬的', l:6 }, { w:'accumulate', c:'积累', l:6 }, { w:'acknowledge', c:'承认', l:6 },
+    { w:'advocate', c:'提倡', l:6 }, { w:'alleviate', c:'缓解', l:6 }, { w:'allocate', c:'分配', l:6 },
+    { w:'ambiguous', c:'模糊的', l:6 }, { w:'anonymous', c:'匿名的', l:6 }, { w:'anticipate', c:'预期', l:6 },
+    { w:'arbitrary', c:'任意的', l:6 }, { w:'arrogant', c:'傲慢的', l:6 }, { w:'authentic', c:'真实的', l:6 },
+    { w:'boundary', c:'边界', l:6 }, { w:'brilliant', c:'杰出的', l:6 }, { w:'cautious', c:'谨慎的', l:6 },
+    { w:'chronic', c:'慢性的', l:6 }, { w:'coincide', c:'巧合', l:6 }, { w:'commence', c:'开始', l:6 },
+    { w:'commodity', c:'商品', l:6 }, { w:'compatible', c:'兼容的', l:6 }, { w:'compensate', c:'补偿', l:6 },
+    { w:'competent', c:'有能力的', l:6 }, { w:'compromise', c:'妥协', l:6 }, { w:'compulsory', c:'强制的', l:6 },
+    { w:'conceal', c:'隐藏', l:6 }, { w:'conceive', c:'构想', l:6 }, { w:'condemn', c:'谴责', l:6 },
+    { w:'confront', c:'面对', l:6 }, { w:'consensus', c:'共识', l:6 }, { w:'consolidate', c:'巩固', l:6 },
+    { w:'conspicuous', c:'显眼的', l:6 }, { w:'contemporary', c:'当代的', l:6 }, { w:'contradict', c:'矛盾', l:6 },
+    { w:'conventional', c:'传统的', l:6 }, { w:'convey', c:'传达', l:6 }, { w:'corrupt', c:'腐败的', l:6 },
+    { w:'criterion', c:'标准', l:6 }, { w:'cultivate', c:'培养', l:6 }, { w:'deliberate', c:'故意的', l:6 },
+    { w:'deteriorate', c:'恶化', l:6 }, { w:'dilemma', c:'困境', l:6 }, { w:'diminish', c:'减少', l:6 },
+    { w:'discriminate', c:'歧视', l:6 }, { w:'elaborate', c:'精心制作的', l:6 }, { w:'elegant', c:'优雅的', l:6 },
+    { w:'elevate', c:'提升', l:6 }, { w:'eloquent', c:'雄辩的', l:6 }, { w:'embrace', c:'拥抱', l:6 },
+    { w:'endeavor', c:'努力', l:6 }, { w:'enhance', c:'提高', l:6 }, { w:'enthusiasm', c:'热情', l:6 },
+    { w:'equivalent', c:'等同的', l:6 }, { w:'essential', c:'必要的', l:6 }, { w:'exaggerate', c:'夸大', l:6 },
+    { w:'exceptional', c:'杰出的', l:6 }, { w:'exclusive', c:'独有的', l:6 }, { w:'exquisite', c:'精致的', l:6 },
+    { w:'extinct', c:'灭绝的', l:6 }, { w:'extraordinary', c:'非凡的', l:6 }, { w:'feasible', c:'可行的', l:6 },
+    { w:'fluctuate', c:'波动', l:6 }, { w:'formulate', c:'制定', l:6 }, { w:'fragile', c:'脆弱的', l:6 },
+    { w:'frustrate', c:'挫败', l:6 }, { w:'hierarchy', c:'等级制度', l:6 }, { w:'hypothesis', c:'假设', l:6 },
+    { w:'illuminate', c:'照亮', l:6 }, { w:'immerse', c:'沉浸', l:6 }, { w:'immune', c:'免疫的', l:6 },
+    { w:'imperative', c:'必要的', l:6 }, { w:'implement', c:'实施', l:6 }, { w:'implicit', c:'含蓄的', l:6 },
+    { w:'incredible', c:'难以置信的', l:6 }, { w:'indifferent', c:'冷漠的', l:6 }, { w:'inevitable', c:'不可避免的', l:6 },
+    { w:'inferior', c:'劣等的', l:6 }, { w:'infinite', c:'无限的', l:6 }, { w:'ingenious', c:'巧妙的', l:6 },
+    { w:'inherent', c:'固有的', l:6 }, { w:'innovation', c:'创新', l:6 }, { w:'insight', c:'洞察力', l:6 },
+    { w:'integrity', c:'正直', l:6 }, { w:'intensive', c:'密集的', l:6 }, { w:'intuition', c:'直觉', l:6 },
+    { w:'justify', c:'证明正当', l:6 }, { w:'legitimate', c:'合法的', l:6 }, { w:'magnificent', c:'壮丽的', l:6 },
+    { w:'manipulate', c:'操纵', l:6 }, { w:'massive', c:'巨大的', l:6 }, { w:'mechanism', c:'机制', l:6 },
+    { w:'mentality', c:'心态', l:6 }, { w:'migrate', c:'迁移', l:6 }, { w:'minimize', c:'最小化', l:6 },
+    { w:'notorious', c:'臭名昭著的', l:6 }, { w:'nurture', c:'培育', l:6 }, { w:'obscure', c:'晦涩的', l:6 },
+    { w:'obligation', c:'义务', l:6 }, { w:'overwhelm', c:'压倒', l:6 }, { w:'paradox', c:'悖论', l:6 },
+    { w:'perception', c:'感知', l:6 }, { w:'persistent', c:'坚持不懈的', l:6 }, { w:'plausible', c:'貌似合理的', l:6 },
+    { w:'preliminary', c:'初步的', l:6 }, { w:'premise', c:'前提', l:6 }, { w:'prestige', c:'声望', l:6 },
+    { w:'profound', c:'深刻的', l:6 }, { w:'prohibit', c:'禁止', l:6 }, { w:'prominent', c:'突出的', l:6 },
+    { w:'prosperity', c:'繁荣', l:6 }, { w:'provoke', c:'挑衅', l:6 }, { w:'radical', c:'激进的', l:6 },
+    { w:'reconcile', c:'调和', l:6 }, { w:'rectify', c:'纠正', l:6 }, { w:'refine', c:'精炼', l:6 },
+    { w:'reinforce', c:'加强', l:6 }, { w:'reluctant', c:'不情愿的', l:6 }, { w:'remedy', c:'补救', l:6 },
+    { w:'retrieve', c:'检索', l:6 }, { w:'revenue', c:'收入', l:6 }, { w:'rigorous', c:'严格的', l:6 },
+    { w:'scenario', c:'情景', l:6 }, { w:'scrutiny', c:'审视', l:6 }, { w:'simultaneous', c:'同时的', l:6 },
+    { w:'skeptical', c:'怀疑的', l:6 }, { w:'sovereign', c:'主权的', l:6 }, { w:'speculate', c:'推测', l:6 },
+    { w:'spontaneous', c:'自发的', l:6 }, { w:'stimulate', c:'刺激', l:6 }, { w:'subordinate', c:'从属的', l:6 },
+    { w:'subtle', c:'微妙的', l:6 }, { w:'supplement', c:'补充', l:6 }, { w:'suppress', c:'压制', l:6 },
+    { w:'surpass', c:'超越', l:6 }, { w:'sustain', c:'维持', l:6 }, { w:'terminate', c:'终止', l:6 },
+    { w:'territory', c:'领土', l:6 }, { w:'thrive', c:'繁荣', l:6 }, { w:'tolerant', c:'宽容的', l:6 },
+    { w:'transition', c:'过渡', l:6 }, { w:'trivial', c:'琐碎的', l:6 }, { w:'turbulent', c:'动荡的', l:6 },
+    { w:'undermine', c:'削弱', l:6 }, { w:'undergo', c:'经历', l:6 }, { w:'validate', c:'验证', l:6 },
+    { w:'verdict', c:'裁决', l:6 }, { w:'versatile', c:'多才多艺的', l:6 }, { w:'vivid', c:'生动的', l:6 },
+    { w:'withdraw', c:'撤回', l:6 }, { w:'withstand', c:'承受', l:6 },
+  ];
+
+  // ---------- 敌人类型 ----------
+  const TYPES = {
+    grunt: { emoji:'👾', hp:1, speed:1.0,  points:10,  color:'#3ee6a0' },
+    swarm: { emoji:'🦠', hp:1, speed:1.7,  points:15,  color:'#ffd166' },
+    brute: { emoji:'🤖', hp:2, speed:0.7,  points:25,  color:'#ff8a5c' },
+    boss:  { emoji:'🐉', hp:5, speed:0.42, points:100, color:'#ff5c8a' },
+  };
+
+  // ---------- DOM ----------
+  const $ = s => document.querySelector(s);
+  const gameEl = $('#game'), stage = $('#stage'), enemiesLayer = $('#enemies'), fxLayer = $('#fx');
+  const playerEl = $('#player'), cmdWrap = $('#cmdWrap'), cmdEl = $('#cmd'), vignette = $('#vignette');
+  const hpFill = $('#hpFill'), hpText = $('#hpText'), scoreEl = $('#score'), comboEl = $('#combo'), levelEl = $('#level'), bestEl = $('#best');
+  const oppName = $('#oppName'), oppHpFill = $('#oppHpFill'), oppHpText = $('#oppHpText'), oppScore = $('#oppScore'), oppCombo = $('#oppCombo'), oppKills = $('#oppKills');
+  const menuOverlay = $('#menuOverlay'), roomOverlay = $('#roomOverlay'), countdownOverlay = $('#countdownOverlay'), countdownNum = $('#countdownNum'), overOverlay = $('#overOverlay'), pauseOverlay = $('#pauseOverlay');
+  const roomStatus = $('#roomStatus');
+
+  // ---------- 状态 ----------
+  const WALL_X = 96;
+  const G = {
+    mode: 'single', running: false, over: false, paused: false, muted: false,
+    hp: 100, maxHp: 100, score: 0, kills: 0, combo: 0, maxCombo: 0,
+    level: 1, timeSinceSpawn: 0, spawnInterval: 2600,
+    bossPending: false, review: [],
+    best: parseInt(localStorage.getItem('typingBattleBest') || '0', 10),
+  };
+  let enemies = [];
+  let activeTarget = null;
+  let prevTarget = null, prevTyped = -1;
+  let SW = 0, SH = 0;
+  let oppState = null;
+
+  // ---------- 音频 ----------
+  let audioCtx = null;
+  function ac() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+  function tone(freq, dur, type = 'square', vol = 0.06, slide = 0) {
+    if (G.muted) return;
+    try {
+      const ctx = ac();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), ctx.currentTime + dur);
+      g.gain.value = vol;
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+      o.connect(g).connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + dur);
+    } catch (e) { /* 忽略 */ }
+  }
+  const sfx = {
+    type: () => tone(620, 0.06, 'square', 0.04),
+    kill: () => { tone(520, 0.1, 'sawtooth', 0.06); setTimeout(() => tone(780, 0.12, 'sawtooth', 0.06), 60); },
+    wrong: () => tone(140, 0.18, 'sawtooth', 0.07),
+    hint: () => tone(880, 0.08, 'sine', 0.06),
+    hit: () => tone(90, 0.3, 'sawtooth', 0.12, -40),
+    boss: () => { tone(220, 0.3, 'square', 0.08, 60); setTimeout(() => tone(330, 0.3, 'square', 0.08, 80), 140); },
+    win: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'sine', 0.08), i * 120)); },
+    lose: () => { [440, 330, 220, 110].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'sawtooth', 0.08), i * 160)); },
+  };
+  function speak(word) {
+    if (G.muted) return;
+    try {
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(word);
+      u.lang = 'en-US'; u.rate = 0.85;
+      speechSynthesis.speak(u);
+    } catch (e) { /* 忽略 */ }
+  }
+
+  // ---------- 网络 ----------
+  let ws = null, myId = -1, myName = '玩家', oppNameStr = '对手', stateTimer = null, cdTimer = null, pendingSend = null;
+
+  function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+
+  function openWS(cb) {
+    if (ws && ws.readyState === 1) { cb(); return; }
+    if (ws && ws.readyState === 0) { pendingSend = cb; return; }
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(proto + '://' + location.host);
+    ws.onopen = () => { if (pendingSend) { const c = pendingSend; pendingSend = null; c(); } };
+    ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handleMsg(m); };
+    ws.onerror = () => { roomStatus.textContent = '连接服务器失败，请重试'; };
+    ws.onclose = () => onWSClose();
+    pendingSend = cb;
+  }
+
+  function createRoom() {
+    const name = $('#createName').value.trim() || '玩家';
+    const pwd = $('#createPwd').value;
+    myName = name;
+    roomStatus.textContent = '正在创建房间…';
+    openWS(() => send({ type: 'createRoom', name, password: pwd }));
+  }
+  function joinRoom() {
+    const code = $('#joinCode').value.trim().toUpperCase();
+    if (!code) { roomStatus.textContent = '请输入房间号'; return; }
+    const name = $('#joinName').value.trim() || '玩家';
+    const pwd = $('#joinPwd').value;
+    myName = name;
+    roomStatus.textContent = '正在加入房间…';
+    openWS(() => send({ type: 'joinRoom', code, name, password: pwd }));
+  }
+
+  function handleMsg(m) {
+    switch (m.type) {
+      case 'roomCreated':
+        roomStatus.innerHTML = `房间号 <span class="room-code">${m.code}</span><br>已复制到剪贴板，等待对手加入…`;
+        if (navigator.clipboard) navigator.clipboard.writeText(m.code).catch(() => {});
+        break;
+      case 'roomError':
+        roomStatus.textContent = m.message;
+        break;
+      case 'start': beginMatch(m); break;
+      case 'opponent': applyOppState(m); break;
+      case 'result': onResult(m); break;
+      case 'opponentLeft': onOpponentLeft(); break;
+      case 'rematchWait': $('#rematchStatus').textContent = '已准备，等待对手…'; break;
+    }
+  }
+
+  function onWSClose() {
+    if (G.running && !G.over) { G.running = false; G.over = true; renderGameOver(false, null, '与服务器断开连接'); }
+    else if (!G.running && !G.over) roomStatus.textContent = '连接已断开，请重试';
+  }
+  function onOpponentLeft() {
+    if (G.running && !G.over) { G.over = true; G.running = false; renderGameOver(true, oppState ? oppState.score : 0, '对手已离开'); }
+    else if (!G.running && !G.over) roomStatus.textContent = '对方已离开，请重新创建或加入房间';
+  }
+
+  function applyOppState(s) {
+    oppState = s;
+    if (!s) return;
+    oppHpFill.style.width = (Math.max(0, s.hp || 0)) + '%';
+    oppHpText.textContent = s.hp || 0;
+    oppScore.textContent = s.score || 0;
+    oppCombo.textContent = 'x' + (s.combo || 0);
+    oppKills.textContent = s.kills || 0;
+  }
+
+  function onResult(m) {
+    if (m.win) {
+      if (!G.over) { G.over = true; G.running = false; renderGameOver(true, m.opponentScore); }
+    } else {
+      if (G.over) { $('#oppFinalScore').textContent = m.opponentScore; }
+      else { G.over = true; G.running = false; renderGameOver(false, m.opponentScore); }
+    }
+  }
+
+  function beginMatch(data) {
+    G.mode = 'multi';
+    myId = data.id; myName = data.name; oppNameStr = data.opponentName;
+    oppName.textContent = oppNameStr;
+    $('#rematchBtn').disabled = false;
+    $('#rematchStatus').textContent = '';
+    menuOverlay.classList.add('hidden');
+    roomOverlay.classList.add('hidden');
+    overOverlay.classList.add('hidden');
+    clearInterval(cdTimer);
+    let n = 3;
+    countdownNum.textContent = n;
+    countdownOverlay.classList.remove('hidden');
+    cdTimer = setInterval(() => {
+      n--;
+      if (n <= 0) { clearInterval(cdTimer); countdownOverlay.classList.add('hidden'); startGame(); }
+      else countdownNum.textContent = n;
+    }, 800);
+  }
+
+  // ---------- 工具 ----------
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+  function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+  function measure() { const r = stage.getBoundingClientRect(); SW = r.width; SH = r.height; }
+
+  function pickWord(level, isBoss) {
+    let pool;
+    if (isBoss) pool = VOCAB.filter(v => v.l === 6 && v.w.length >= 8);
+    else if (level <= 2) pool = VOCAB.filter(v => v.l === 4 && v.w.length <= 6);
+    else if (level <= 4) pool = VOCAB.filter(v => v.l === 4);
+    else if (level <= 6) pool = VOCAB.filter(v => v.w.length >= 6);
+    else pool = VOCAB.filter(v => v.l === 6);
+    if (!pool.length) pool = VOCAB;
+    return pick(pool);
+  }
+  function pickType() {
+    const r = Math.random();
+    if (r < 0.55) return 'grunt';
+    if (r < 0.80) return 'swarm';
+    return 'brute';
+  }
+
+  function spellHTML(word, typed, hinted) {
+    let h = '';
+    for (let i = 0; i < word.length; i++) {
+      let cls = '', ch = '_';
+      if (i < typed) { cls = 'done'; ch = word[i]; }
+      else if (i === typed) { cls = 'cur'; ch = hinted[i] ? word[i] : '_'; }
+      else if (hinted[i]) { cls = 'hint'; ch = word[i]; }
+      h += `<span class="${cls}">${ch}</span>`;
+    }
+    return h;
+  }
+
+  // ---------- 错词回顾 ----------
+  function addReview(w, c, reason) {
+    const e = G.review.find(r => r.w === w);
+    if (e) { if (!e.reasons.includes(reason)) e.reasons.push(reason); }
+    else G.review.push({ w, c, reasons: [reason] });
+  }
+  function renderReview() {
+    const box = $('#reviewList');
+    if (!G.review.length) { box.innerHTML = '<div class="review-empty">本局没有错词，太棒了！</div>'; return; }
+    let html = '';
+    G.review.slice(0, 40).forEach(r => {
+      html += `<div class="review-item"><span class="rw">${r.w}</span><span class="rc">${r.c}</span><span class="rr">${r.reasons.join(' / ')}</span></div>`;
+    });
+    box.innerHTML = html;
+  }
+
+  // ---------- HUD ----------
+  function updateHUD() {
+    const ratio = G.hp / G.maxHp;
+    hpFill.style.width = (ratio * 100) + '%';
+    hpFill.style.background = ratio > 0.5 ? 'linear-gradient(90deg, var(--green), var(--cyan))'
+      : ratio > 0.25 ? 'linear-gradient(90deg, var(--gold), var(--orange))' : 'linear-gradient(90deg, var(--orange), var(--red))';
+    hpText.textContent = G.hp;
+    scoreEl.textContent = G.score;
+    comboEl.textContent = 'x' + G.combo;
+    levelEl.textContent = G.level;
+    bestEl.textContent = G.best;
+  }
+  function updateCommand() {
+    if (!activeTarget) { cmdEl.innerHTML = ''; return; }
+    cmdEl.innerHTML = spellHTML(activeTarget.word, activeTarget.typed, activeTarget.hinted);
+  }
+
+  // ---------- 特效 ----------
+  function shake(intensity) {
+    gameEl.style.setProperty('--shake-x', intensity + 'px');
+    gameEl.style.setProperty('--shake-y', intensity + 'px');
+    gameEl.classList.remove('shaking');
+    void gameEl.offsetWidth;
+    gameEl.classList.add('shaking');
+  }
+  function flashError() {
+    cmdWrap.classList.add('error');
+    clearTimeout(flashError._t);
+    flashError._t = setTimeout(() => cmdWrap.classList.remove('error'), 160);
+  }
+  function flashHit() {
+    vignette.classList.add('on');
+    clearTimeout(flashHit._t);
+    flashHit._t = setTimeout(() => vignette.classList.remove('on'), 120);
+  }
+  function addParticles(x, y, color, count = 14) {
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.background = color;
+      p.style.boxShadow = `0 0 6px ${color}`;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      fxLayer.appendChild(p);
+      const ang = rand(0, Math.PI * 2), dist = rand(24, 70);
+      p.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) scale(0.2)`, opacity: 0 }
+      ], { duration: randInt(350, 650), easing: 'ease-out' }).onfinish = () => p.remove();
+    }
+  }
+  function addDamage(x, y, text, color) {
+    const d = document.createElement('div');
+    d.className = 'dmg';
+    d.textContent = text;
+    d.style.color = color;
+    d.style.left = x + 'px'; d.style.top = y + 'px';
+    fxLayer.appendChild(d);
+    d.animate([
+      { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1 },
+      { transform: 'translate(-50%,-130%) scale(1)', opacity: 0 }
+    ], { duration: 700, easing: 'ease-out' }).onfinish = () => d.remove();
+  }
+
+  // ---------- 敌人 ----------
+  function spawnEnemy() {
+    const isBoss = G.bossPending;
+    if (isBoss) G.bossPending = false;
+    const type = isBoss ? 'boss' : pickType();
+    const cfg = TYPES[type];
+    const entry = pickWord(G.level, isBoss);
+    const speed = (12 + G.level * 3.5) * cfg.speed;
+
+    const el = document.createElement('div');
+    el.className = 'enemy ' + type;
+    el.innerHTML =
+      `<div class="eCN">${entry.c}</div>` +
+      `<div class="espeak" title="重听发音">🔊</div>` +
+      `<div class="ebody">${cfg.emoji}</div>` +
+      `<div class="ehp">${'❤'.repeat(cfg.hp)}</div>`;
+    enemiesLayer.appendChild(el);
+
+    const y = rand(90, Math.max(150, SH - 150));
+    const enemy = { el, word: entry.w, cn: entry.c, typed: 0, hinted: Array(entry.w.length).fill(false),
+                    mistakes: 0, hintUsed: false, hp: cfg.hp, maxHp: cfg.hp,
+                    points: cfg.points, color: cfg.color, type, speed,
+                    x: SW + 60, y, w: el.offsetWidth, h: el.offsetHeight };
+    el.style.transform = `translate(${enemy.x}px, ${enemy.y}px)`;
+    el.querySelector('.espeak').addEventListener('click', (ev) => { ev.stopPropagation(); speak(enemy.word); });
+    enemies.push(enemy);
+    if (isBoss) sfx.boss();
+  }
+
+  function enemyCenter(e) { return { x: e.x + e.w / 2, y: e.y + e.h / 2 }; }
+
+  function damageEnemy(e) {
+    if (e.mistakes > 0 || e.hintUsed) {
+      const parts = [];
+      if (e.mistakes > 0) parts.push('拼错' + e.mistakes + '次');
+      if (e.hintUsed) parts.push('用了提示');
+      addReview(e.word, e.cn, parts.join(' · '));
+    }
+    e.hp--;
+    e.el.querySelector('.ehp').innerHTML = '❤'.repeat(Math.max(0, e.hp));
+    const c = enemyCenter(e);
+    if (e.hp <= 0) {
+      killEnemy(e);
+    } else {
+      const entry = pickWord(G.level, e.type === 'boss');
+      e.word = entry.w; e.cn = entry.c; e.typed = 0;
+      e.hinted = Array(entry.w.length).fill(false);
+      e.mistakes = 0; e.hintUsed = false;
+      e.el.querySelector('.eCN').textContent = entry.c;
+      addDamage(c.x, c.y, '-1', '#fff');
+      addParticles(c.x, c.y, e.color, 8);
+      if (e === activeTarget) speak(e.word);
+      sfx.type();
+    }
+  }
+
+  function killEnemy(e) {
+    const idx = enemies.indexOf(e);
+    if (idx !== -1) enemies.splice(idx, 1);
+    const c = enemyCenter(e);
+    e.el.classList.add('dying');
+    setTimeout(() => e.el.remove(), 350);
+    addParticles(c.x, c.y, e.color, 22);
+    addDamage(c.x, c.y, '+' + e.points, e.color);
+
+    G.kills++;
+    G.combo++;
+    G.maxCombo = Math.max(G.maxCombo, G.combo);
+    G.score += Math.round(e.points * (1 + G.combo * 0.1));
+    G.level = 1 + Math.floor(G.kills / 8);
+    G.spawnInterval = Math.max(950, 2600 - G.level * 130);
+    if (G.kills % 10 === 0) G.bossPending = true;
+
+    if (e.type === 'boss') shake(8); else shake(4);
+    sfx.kill();
+    comboPop();
+    updateHUD();
+  }
+
+  function hitPlayer(e) {
+    const idx = enemies.indexOf(e);
+    if (idx !== -1) enemies.splice(idx, 1);
+    addReview(e.word, e.cn, '未答出');
+    e.el.remove();
+    G.hp = Math.max(0, G.hp - 20);
+    G.combo = 0;
+    shake(10); flashHit(); sfx.hit();
+    playerEl.classList.remove('hit'); void playerEl.offsetWidth; playerEl.classList.add('hit');
+    updateHUD();
+    if (G.hp <= 0) onLocalDeath();
+  }
+
+  function comboPop() {
+    comboEl.classList.remove('pop'); void comboEl.offsetWidth; comboEl.classList.add('pop');
+  }
+  function leftmost() {
+    let best = null;
+    for (const e of enemies) if (!best || e.x < best.x) best = e;
+    return best;
+  }
+  function updateEnemies(dt) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      e.x -= e.speed * dt;
+      e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
+      if (e.x + e.w <= WALL_X) hitPlayer(e);
+    }
+  }
+  function markTarget() {
+    for (const e of enemies) e.el.classList.toggle('target', e === activeTarget);
+  }
+
+  // ---------- 提示系统 ----------
+  function useHint() {
+    const t = activeTarget;
+    if (!t || G.over || G.paused || !G.running) return;
+    for (let i = t.typed; i < t.word.length; i++) {
+      if (!t.hinted[i]) {
+        t.hinted[i] = true; t.hintUsed = true;
+        G.score = Math.max(0, G.score - 10);
+        sfx.hint(); updateHUD(); updateCommand();
+        return;
+      }
+    }
+  }
+
+  // ---------- 流程 ----------
+  function startGame() {
+    enemies.forEach(e => e.el.remove());
+    enemies = [];
+    fxLayer.innerHTML = '';
+    G.running = true; G.over = false; G.paused = false;
+    G.hp = G.maxHp; G.score = 0; G.kills = 0; G.combo = 0; G.maxCombo = 0;
+    G.level = 1; G.timeSinceSpawn = 0; G.spawnInterval = 2600; G.bossPending = false;
+    G.review = [];
+    oppState = null;
+    applyOppState({ hp: 100, score: 0, kills: 0, combo: 0, level: 1 });
+    $('#oppPanel').style.display = G.mode === 'multi' ? '' : 'none';
+    overOverlay.classList.add('hidden');
+    pauseOverlay.classList.add('hidden');
+    measure(); updateHUD(); updateCommand();
+    if (G.mode === 'multi' && !stateTimer) {
+      stateTimer = setInterval(() => {
+        if (G.running && !G.over && ws && ws.readyState === 1) {
+          send({ type: 'state', hp: G.hp, score: G.score, kills: G.kills, combo: G.combo, level: G.level });
+        }
+      }, 150);
+    }
+  }
+
+  function startSingle() {
+    G.mode = 'single';
+    menuOverlay.classList.add('hidden');
+    roomOverlay.classList.add('hidden');
+    startGame();
+  }
+
+  function onLocalDeath() {
+    if (G.mode === 'multi') send({ type: 'dead', score: G.score });
+    if (!G.over) { G.over = true; G.running = false; renderGameOver(false, null); }
+  }
+
+  function renderGameOver(win, oppScore, note) {
+    if (G.score > G.best) { G.best = G.score; localStorage.setItem('typingBattleBest', G.best); }
+    $('#resultTitle').textContent = win ? '胜利！' : '失败';
+    $('#resultTitle').style.color = win ? 'var(--green)' : 'var(--pink)';
+    $('#finalScore').textContent = G.score + ' 分';
+    $('#finalKills').textContent = G.kills;
+    $('#finalCombo').textContent = 'x' + G.maxCombo;
+    $('#finalBest').textContent = G.best;
+    $('#oppFinalScore').textContent = (oppScore != null ? oppScore : '—');
+    if (note) $('#rematchStatus').textContent = note;
+    renderReview();
+    overOverlay.classList.remove('hidden');
+    updateHUD();
+    if (win) sfx.win(); else sfx.lose();
+  }
+
+  function togglePause() {
+    if (!G.running || G.over) return;
+    G.paused = !G.paused;
+    pauseOverlay.classList.toggle('hidden', !G.paused);
+  }
+  function toggleMute() {
+    G.muted = !G.muted;
+    if (G.muted && 'speechSynthesis' in window) speechSynthesis.cancel();
+    $('#muteBtn').textContent = G.muted ? '🔇 静音' : '🔊 音效';
+  }
+
+  // ---------- 输入 ----------
+  function onKey(e) {
+    if (e.key === 'Escape') { togglePause(); return; }
+    if (e.key === 'm' || e.key === 'M') { toggleMute(); return; }
+    if (G.over || G.paused || !G.running) return;
+    if (e.key === 'Tab') { e.preventDefault(); useHint(); return; }
+    if (e.key === ' ') { e.preventDefault(); if (activeTarget) speak(activeTarget.word); return; }
+    if (!/^[a-zA-Z]$/.test(e.key)) return;
+    e.preventDefault();
+
+    const t = activeTarget;
+    if (!t) return;
+    const ch = e.key.toLowerCase();
+    const need = t.word[t.typed];
+    if (ch === need) {
+      t.typed++;
+      sfx.type();
+      if (t.typed >= t.word.length) { t.typed = 0; damageEnemy(t); }
+    } else {
+      t.mistakes++;
+      G.combo = Math.max(0, G.combo - 1);
+      shake(3); flashError(); sfx.wrong(); updateHUD();
+    }
+  }
+
+  // ---------- 主循环 ----------
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    if (G.running && !G.paused && !G.over) {
+      G.timeSinceSpawn += dt * 1000;
+      if (G.timeSinceSpawn >= G.spawnInterval) { G.timeSinceSpawn = 0; spawnEnemy(); }
+      updateEnemies(dt);
+    }
+
+    activeTarget = leftmost();
+    if (activeTarget !== prevTarget || (activeTarget && activeTarget.typed !== prevTyped)) {
+      const changed = activeTarget !== prevTarget;
+      prevTarget = activeTarget;
+      prevTyped = activeTarget ? activeTarget.typed : -1;
+      if (changed && activeTarget && G.running && !G.over) speak(activeTarget.word);
+      markTarget();
+      updateCommand();
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- 绑定 ----------
+  window.addEventListener('keydown', onKey);
+  window.addEventListener('resize', measure);
+  $('#singleBtn').addEventListener('click', () => { ac(); startSingle(); });
+  $('#multiBtn').addEventListener('click', () => { menuOverlay.classList.add('hidden'); roomOverlay.classList.remove('hidden'); });
+  $('#createBtn').addEventListener('click', () => { ac(); createRoom(); });
+  $('#joinBtn').addEventListener('click', () => { ac(); joinRoom(); });
+  $('#roomBackBtn').addEventListener('click', () => location.reload());
+  $('#hintBtn').addEventListener('click', useHint);
+  $('#rematchBtn').addEventListener('click', () => {
+    if (G.mode === 'multi') {
+      send({ type: 'rematch' });
+      $('#rematchBtn').disabled = true;
+      $('#rematchStatus').textContent = '已准备，等待对手…';
+    } else {
+      startGame();
+    }
+  });
+  $('#menuBtn').addEventListener('click', () => location.reload());
+  $('#resumeBtn').addEventListener('click', togglePause);
+  $('#muteBtn').addEventListener('click', toggleMute);
+
+  measure();
+  bestEl.textContent = G.best;
+  updateHUD();
+  applyOppState({ hp: 100, score: 0, kills: 0, combo: 0, level: 1 });
+  $('#oppPanel').style.display = 'none';
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Render Blueprint —— 部署配置
+# 在 render.com 选择 "New > Blueprint"，连接本 GitHub 仓库即可一键部署
+services:
+  - type: web
+    name: typing-battle
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
